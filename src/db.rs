@@ -106,6 +106,17 @@ impl Database {
         .await
     }
 
+    pub async fn insert_log_message(&self, source: String, message: String) -> anyhow::Result<()> {
+        self.with_db(move |db| {
+            db.execute(
+                "INSERT INTO log (timestamp, source, message) VALUES (unixepoch(), ?1, ?2)",
+                (source, message),
+            )?;
+            Ok(())
+        })
+        .await
+    }
+
     async fn with_db<
         T: 'static + Send,
         F: 'static + Send + FnOnce(&mut Connection) -> anyhow::Result<T>,
@@ -158,6 +169,15 @@ fn create_tables(conn: &Connection) -> anyhow::Result<()> {
         (),
     )?;
     conn.execute(
+        "CREATE TABLE if not exists log (
+            id         INTEGER PRIMARY KEY,
+            timestamp  INTEGER,
+            source     TEXT,
+            message    TEXT
+        )",
+        (),
+    )?;
+    conn.execute(
         "CREATE INDEX listings_website_id ON listings(website, website_id)",
         (),
     )?;
@@ -166,6 +186,7 @@ fn create_tables(conn: &Connection) -> anyhow::Result<()> {
         (),
     )?;
     conn.execute("CREATE INDEX images_hash ON images(hash)", ())?;
+    conn.execute("CREATE INDEX log_timestamp ON log(timestamp)", ())?;
     Ok(())
 }
 
