@@ -54,6 +54,7 @@ impl Database {
                         rusqlite::params![blob_id, listing.price, listing.title, id],
                     )?;
                     garbage_collect_blob(&mut tx, old_image_blob)?;
+                    insert_categories(&mut tx, id, listing.categories)?;
                 }
                 Err(rusqlite::Error::QueryReturnedNoRows) => {
                     tx.execute(
@@ -84,6 +85,8 @@ impl Database {
                             blob_id
                         ],
                     )?;
+                    let insert_id = tx.last_insert_rowid();
+                    insert_categories(&mut tx, insert_id, listing.categories)?;
                 }
                 x @ Err(_) => {
                     x?;
@@ -135,6 +138,14 @@ fn create_tables(conn: &Connection) -> anyhow::Result<()> {
         (),
     )?;
     conn.execute(
+        "CREATE TABLE if not exists categories (
+            listing_id   INTEGER,
+            category     CHAR(64),
+            PRIMARY KEY (listing_id, category)
+        )",
+        (),
+    )?;
+    conn.execute(
         "CREATE INDEX listings_website_id ON listings(website, website_id)",
         (),
     )?;
@@ -173,6 +184,20 @@ fn garbage_collect_blob(tx: &mut Transaction, id: i64) -> rusqlite::Result<()> {
     Ok(())
 }
 
+fn insert_categories(
+    tx: &mut Transaction,
+    id: i64,
+    categories: Vec<String>,
+) -> rusqlite::Result<()> {
+    for cat in categories {
+        tx.execute(
+            "INSERT OR IGNORE INTO categories (listing_id, category) VALUES (?1, ?2)",
+            rusqlite::params![id, cat],
+        )?;
+    }
+    Ok(())
+}
+
 fn hash_blob(data: &[u8]) -> String {
     let mut hasher = sha2::Sha256::new();
     hasher.update(data);
@@ -183,10 +208,12 @@ fn hash_blob(data: &[u8]) -> String {
     res
 }
 
+#[derive(Debug)]
 pub struct Listing {
-    website: String,
-    website_id: String,
-    price: i64,
-    title: String,
-    image_data: Vec<u8>,
+    pub website: String,
+    pub website_id: String,
+    pub price: i64,
+    pub title: String,
+    pub image_data: Vec<u8>,
+    pub categories: Vec<String>,
 }
