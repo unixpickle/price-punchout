@@ -66,7 +66,10 @@ impl Database {
                             website_id,
                             price,
                             title,
-                            image_blob
+                            image_blob,
+                            star_rating,
+                            max_stars,
+                            num_reviews,
                         ) VALUES (
                             unixepoch(),
                             unixepoch(),
@@ -74,7 +77,10 @@ impl Database {
                             ?2,
                             ?3,
                             ?4,
-                            ?5
+                            ?5,
+                            ?6,
+                            ?7,
+                            ?8
                         )
                     ",
                         rusqlite::params![
@@ -82,7 +88,10 @@ impl Database {
                             listing.website_id,
                             listing.price,
                             listing.title,
-                            blob_id
+                            blob_id,
+                            listing.star_rating,
+                            listing.max_stars,
+                            listing.num_reviews,
                         ],
                     )?;
                     let insert_id = tx.last_insert_rowid();
@@ -117,13 +126,16 @@ fn create_tables(conn: &Connection) -> anyhow::Result<()> {
     conn.execute(
         "CREATE TABLE if not exists listings (
             id           INTEGER PRIMARY KEY,
-            created      INTEGER,
-            last_seen     INTEGER,
-            website      CHAR(32),
-            website_id   CHAR(32),
-            price        INTEGER,
-            title        CHAR(128),
-            image_blob   INTEGER,
+            created      INTEGER NOT NULL,
+            last_seen    INTEGER NOT NULL,
+            website      CHAR(32) NOT NULL,
+            website_id   CHAR(32) NOT NULL,
+            price        INTEGER NOT NULL,
+            title        CHAR(128) NOT NULL,
+            image_blob   INTEGER NOT NULL,
+            star_rating  REAL,
+            max_stars    REAL,
+            num_reviews  INTEGER,
             UNIQUE (website, website_id)
         )",
         (),
@@ -216,4 +228,9 @@ pub struct Listing {
     pub title: String,
     pub image_data: Vec<u8>,
     pub categories: Vec<String>,
+
+    // Optional per-website fields
+    pub star_rating: Option<f64>,
+    pub max_stars: Option<f64>,
+    pub num_reviews: Option<i64>,
 }
