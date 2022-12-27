@@ -3,6 +3,7 @@ use std::{future::Future, time::Duration};
 use reqwest::IntoUrl;
 use tokio::time::sleep;
 
+#[derive(Clone)]
 pub struct Client {
     client: reqwest::Client,
     num_retries: i32,
