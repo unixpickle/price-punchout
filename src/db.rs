@@ -118,6 +118,36 @@ impl Database {
         .await
     }
 
+    pub async fn should_update_source(
+        &self,
+        source: String,
+        max_seconds: i64,
+    ) -> anyhow::Result<bool> {
+        self.with_db(move |db| {
+            match db.query_row(
+                "SELECT (last_updated+?1 < unixepoch()) FROM source_status WHERE source_id=?2",
+                (max_seconds, source),
+                |row| row.get::<_, bool>(0),
+            ) {
+                Ok(value) => Ok(value),
+                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(true),
+                x @ Err(_) => x.map_err(|e| e.into()),
+            }
+        })
+        .await
+    }
+
+    pub async fn updated_source(&self, source: String) -> anyhow::Result<()> {
+        self.with_db(move |db| {
+            db.execute(
+                "INSERT OR REPLACE INTO source_status (source_id, last_updated) VALUES (?1, unixepoch())",
+                (source,),
+            )?;
+            Ok(())
+        })
+        .await
+    }
+
     async fn with_db<
         T: 'static + Send,
         F: 'static + Send + FnOnce(&mut Connection) -> anyhow::Result<T>,
@@ -170,6 +200,14 @@ fn create_tables(conn: &Connection) -> anyhow::Result<()> {
         (),
     )?;
     conn.execute(
+        "CREATE TABLE if not exists source_status (
+            source_id    CHAR(64),
+            last_updated INTEGER,
+            PRIMARY KEY (source_id)
+        )",
+        (),
+    )?;
+    conn.execute(
         "CREATE TABLE if not exists log (
             id         INTEGER PRIMARY KEY,
             timestamp  INTEGER,
@@ -188,7 +226,7 @@ fn create_tables(conn: &Connection) -> anyhow::Result<()> {
     )?;
     conn.execute("CREATE INDEX if not exists blobs_hash ON blobs(hash)", ())?;
     conn.execute(
-        "CREATE INDEX listings_image_blob ON listings(image_blob)",
+        "CREATE INDEX if not exists log_timestamp ON log(timestamp)",
         (),
     )?;
     Ok(())
