@@ -109,10 +109,16 @@ impl Database {
 
     pub async fn insert_log_message(&self, source: String, message: String) -> anyhow::Result<()> {
         self.with_db(move |db| {
-            db.execute(
+            let tx = db.transaction()?;
+            tx.execute(
                 "INSERT INTO log (timestamp, source, message) VALUES (unixepoch(), ?1, ?2)",
                 (source, message),
             )?;
+            tx.execute(
+                "DELETE FROM log WHERE timestamp < unixepoch()-?1",
+                (60 * 60 * 24 * 5,),
+            )?;
+            tx.commit()?;
             Ok(())
         })
         .await
@@ -222,6 +228,10 @@ fn create_tables(conn: &Connection) -> anyhow::Result<()> {
     )?;
     conn.execute(
         "CREATE INDEX if not exists listings_image_blob ON listings(image_blob)",
+        (),
+    )?;
+    conn.execute(
+        "CREATE INDEX if not exists listings_last_seen ON listings(last_seen)",
         (),
     )?;
     conn.execute("CREATE INDEX if not exists blobs_hash ON blobs(hash)", ())?;
