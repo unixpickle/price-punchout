@@ -36,7 +36,7 @@ impl Database {
             let mut tx = db.transaction()?;
             let blob_id = insert_blob(&mut tx, &listing.image_data)?;
             let result: rusqlite::Result<(i64, i64)> = tx.query_row(
-                "SELECT id, image_blob FROM listings WHERE website=?1, website_id=?2",
+                "SELECT id, image_blob FROM listings WHERE website=?1 AND website_id=?2",
                 (&listing.website, &listing.website_id),
                 |row| Ok((row.get(0)?, row.get(1)?)),
             );
@@ -69,7 +69,7 @@ impl Database {
                             image_blob,
                             star_rating,
                             max_stars,
-                            num_reviews,
+                            num_reviews
                         ) VALUES (
                             unixepoch(),
                             unixepoch(),
@@ -101,6 +101,7 @@ impl Database {
                     x?;
                 }
             }
+            tx.commit()?;
             Ok(())
         })
         .await
@@ -156,7 +157,7 @@ fn create_tables(conn: &Connection) -> anyhow::Result<()> {
             id           INTEGER PRIMARY KEY,
             hash         CHAR(32),
             data         BLOB,
-            UNIQUE hash
+            UNIQUE (hash)
         )",
         (),
     )?;
@@ -178,15 +179,18 @@ fn create_tables(conn: &Connection) -> anyhow::Result<()> {
         (),
     )?;
     conn.execute(
-        "CREATE INDEX listings_website_id ON listings(website, website_id)",
+        "CREATE INDEX if not exists listings_website_id ON listings(website, website_id)",
         (),
     )?;
+    conn.execute(
+        "CREATE INDEX if not exists listings_image_blob ON listings(image_blob)",
+        (),
+    )?;
+    conn.execute("CREATE INDEX if not exists blobs_hash ON blobs(hash)", ())?;
     conn.execute(
         "CREATE INDEX listings_image_blob ON listings(image_blob)",
         (),
     )?;
-    conn.execute("CREATE INDEX images_hash ON images(hash)", ())?;
-    conn.execute("CREATE INDEX log_timestamp ON log(timestamp)", ())?;
     Ok(())
 }
 
