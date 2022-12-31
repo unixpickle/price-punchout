@@ -6,6 +6,8 @@ use rusqlite::{Connection, Transaction};
 use sha2::Digest;
 use tokio::{sync::Mutex, task::spawn_blocking};
 
+const LOG_EXPIRATION: i64 = 60 * 60 * 24 * 5;
+
 #[derive(Clone)]
 pub struct Database {
     db: Arc<Mutex<Connection>>,
@@ -116,7 +118,7 @@ impl Database {
             )?;
             tx.execute(
                 "DELETE FROM log WHERE timestamp < unixepoch()-?1",
-                (60 * 60 * 24 * 5,),
+                (LOG_EXPIRATION,),
             )?;
             tx.commit()?;
             Ok(())
@@ -150,6 +152,28 @@ impl Database {
                 (source,),
             )?;
             Ok(())
+        })
+        .await
+    }
+
+    // Delete listings that haven't been updated in more than timeout seconds.
+    // Returns the number of listings and blobs that were deleted.
+    pub async fn delete_old_listings(&self, timeout: i64) -> anyhow::Result<(usize, usize)> {
+        self.with_db(move |db| {
+            let tx = db.transaction()?;
+            let listing_count = tx.execute(
+                "DELETE FROM listings WHERE last_seen+?1 < unixepoch()",
+                (timeout,),
+            )?;
+            let blob_count = tx.execute(
+                "
+                    DELETE FROM blobs WHERE (
+                        SELECT COUNT(*) FROM listings WHERE listings.image_blob = blobs.id
+                    ) == 0",
+                (),
+            )?;
+            tx.commit()?;
+            Ok((listing_count, blob_count))
         })
         .await
     }
