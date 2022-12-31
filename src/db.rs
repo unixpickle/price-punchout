@@ -126,8 +126,7 @@ impl Database {
                 "DELETE FROM log WHERE timestamp < unixepoch()-?1",
                 (LOG_EXPIRATION,),
             )?;
-            tx.commit()?;
-            Ok(())
+            tx.commit()
         })
         .await
     }
@@ -156,8 +155,7 @@ impl Database {
             db.execute(
                 "INSERT OR REPLACE INTO source_status (source_id, last_updated) VALUES (?1, unixepoch())",
                 (source,),
-            )?;
-            Ok(())
+            ).map(|_| ())
         })
         .await
     }
@@ -237,7 +235,7 @@ impl Database {
                     Ok(Some(listing))
                 }
                 Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-                Err(e) => Err(e.into()),
+                Err(e) => Err(e),
             }
         })
         .await
