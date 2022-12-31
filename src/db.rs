@@ -15,17 +15,18 @@ pub struct Database {
 }
 
 impl Database {
-    pub async fn open<P: AsRef<Path>>(path: P) -> anyhow::Result<Database> {
+    pub async fn open<P: AsRef<Path>>(path: P) -> rusqlite::Result<Database> {
         let path = path.as_ref().to_owned();
-        spawn_blocking(move || Database::new_with_conn(Connection::open(path)?)).await?
+        spawn_blocking_rusqlite(move || Database::new_with_conn(Connection::open(path)?)).await
     }
 
     #[allow(dead_code)]
-    pub async fn open_in_memory() -> anyhow::Result<Database> {
-        spawn_blocking(move || Database::new_with_conn(Connection::open_in_memory()?)).await?
+    pub async fn open_in_memory() -> rusqlite::Result<Database> {
+        spawn_blocking_rusqlite(move || Database::new_with_conn(Connection::open_in_memory()?))
+            .await
     }
 
-    fn new_with_conn(conn: Connection) -> anyhow::Result<Database> {
+    fn new_with_conn(conn: Connection) -> rusqlite::Result<Database> {
         create_tables(&conn)?;
         Ok(Database {
             db: Arc::new(Mutex::new(conn)),
@@ -34,7 +35,7 @@ impl Database {
 
     // Either insert a new listing, or update the information if the website_id
     // is already present in the database.
-    pub async fn insert_or_update(&self, listing: Listing) -> anyhow::Result<()> {
+    pub async fn insert_or_update(&self, listing: Listing) -> rusqlite::Result<()> {
         self.with_db(move |db| {
             let mut tx = db.transaction()?;
             let blob_id = insert_blob(&mut tx, &listing.image_data)?;
@@ -110,7 +111,11 @@ impl Database {
         .await
     }
 
-    pub async fn insert_log_message(&self, source: String, message: String) -> anyhow::Result<()> {
+    pub async fn insert_log_message(
+        &self,
+        source: String,
+        message: String,
+    ) -> rusqlite::Result<()> {
         self.with_db(move |db| {
             let tx = db.transaction()?;
             tx.execute(
@@ -131,7 +136,7 @@ impl Database {
         &self,
         source: String,
         max_seconds: i64,
-    ) -> anyhow::Result<bool> {
+    ) -> rusqlite::Result<bool> {
         self.with_db(move |db| {
             match db.query_row(
                 "SELECT (last_updated+?1 < unixepoch()) FROM source_status WHERE source_id=?2",
@@ -146,7 +151,7 @@ impl Database {
         .await
     }
 
-    pub async fn updated_source(&self, source: String) -> anyhow::Result<()> {
+    pub async fn updated_source(&self, source: String) -> rusqlite::Result<()> {
         self.with_db(move |db| {
             db.execute(
                 "INSERT OR REPLACE INTO source_status (source_id, last_updated) VALUES (?1, unixepoch())",
@@ -159,7 +164,7 @@ impl Database {
 
     // Delete listings that haven't been updated in more than timeout seconds.
     // Returns the number of listings and blobs that were deleted.
-    pub async fn delete_old_listings(&self, timeout: i64) -> anyhow::Result<(usize, usize)> {
+    pub async fn delete_old_listings(&self, timeout: i64) -> rusqlite::Result<(usize, usize)> {
         self.with_db(move |db| {
             let tx = db.transaction()?;
             let listing_count = tx.execute(
@@ -183,7 +188,7 @@ impl Database {
         &self,
         blacklist: I,
         query: String,
-    ) -> anyhow::Result<Option<Listing>> {
+    ) -> rusqlite::Result<Option<Listing>> {
         self.with_db(move |db| {
             let tx = db.transaction()?;
             let indices = Rc::new(
@@ -240,21 +245,39 @@ impl Database {
 
     async fn with_db<
         T: 'static + Send,
-        F: 'static + Send + FnOnce(&mut Connection) -> anyhow::Result<T>,
+        F: 'static + Send + FnOnce(&mut Connection) -> rusqlite::Result<T>,
     >(
         &self,
         f: F,
-    ) -> anyhow::Result<T> {
+    ) -> rusqlite::Result<T> {
         let db_ref = self.db.clone();
-        spawn_blocking(move || {
+        spawn_blocking_rusqlite(move || {
             let mut db = db_ref.blocking_lock();
             f(&mut db)
         })
-        .await?
+        .await
     }
 }
 
-fn create_tables(conn: &Connection) -> anyhow::Result<()> {
+async fn spawn_blocking_rusqlite<
+    T: 'static + Send,
+    F: 'static + Send + FnOnce() -> rusqlite::Result<T>,
+>(
+    f: F,
+) -> rusqlite::Result<T> {
+    match spawn_blocking(f).await {
+        Ok(x) => x,
+        Err(e) => Err(rusqlite::Error::SqliteFailure(
+            rusqlite::ffi::Error {
+                code: rusqlite::ErrorCode::InternalMalfunction,
+                extended_code: 0,
+            },
+            Some(format!("{}", e)),
+        )),
+    }
+}
+
+fn create_tables(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute(
         "CREATE TABLE if not exists listings (
             id           INTEGER PRIMARY KEY,
