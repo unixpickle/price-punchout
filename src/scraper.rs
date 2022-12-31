@@ -1,18 +1,18 @@
-use std::{future::Future, time::Duration};
+use std::{future::Future, ops::DerefMut, sync::Arc, time::Duration};
 
 use reqwest::IntoUrl;
-use tokio::time::sleep;
+use tokio::{sync::RwLock, time::sleep};
 
 #[derive(Clone)]
 pub struct Client {
-    client: reqwest::Client,
+    client: Arc<RwLock<reqwest::Client>>,
     num_retries: i32,
 }
 
 impl Client {
     pub fn new(num_retries: i32) -> Client {
         Client {
-            client: reqwest::Client::new(),
+            client: Arc::new(RwLock::new(reqwest::Client::new())),
             num_retries: num_retries,
         }
     }
@@ -23,7 +23,7 @@ impl Client {
         F: Future<Output = anyhow::Result<T>>,
         Resp: Fn(reqwest::Response) -> F,
     >(
-        &mut self,
+        &self,
         url: U,
         resp_fn: Resp,
     ) -> anyhow::Result<T> {
@@ -37,18 +37,22 @@ impl Client {
         Req: Fn(&reqwest::Client) -> reqwest::RequestBuilder,
         Resp: Fn(reqwest::Response) -> F,
     >(
-        &mut self,
+        &self,
         req_fn: Req,
         resp_fn: Resp,
     ) -> anyhow::Result<T> {
         let mut last_err: anyhow::Error = anyhow::Error::msg("UNREACHABLE");
         for i in 0..self.num_retries {
-            let builder = req_fn(&self.client).timeout(Duration::from_secs(30));
+            let client = self.client.read().await;
+            let builder = req_fn(&client).timeout(Duration::from_secs(30));
             let result = builder.send().await;
             match result {
                 Err(e) => {
                     last_err = e.into();
-                    self.client = reqwest::Client::new();
+                    drop(client);
+                    let mut writer = self.client.write().await;
+                    *writer.deref_mut() = reqwest::Client::new();
+                    drop(writer); // Explicitly unlock before sleeping
                     if i + 1 < self.num_retries {
                         sleep(Duration::from_secs(10)).await;
                     }
