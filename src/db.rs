@@ -1,5 +1,6 @@
 use std::fmt::Write;
 use std::path::Path;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use rusqlite::{Connection, Transaction};
@@ -174,6 +175,65 @@ impl Database {
             )?;
             tx.commit()?;
             Ok((listing_count, blob_count))
+        })
+        .await
+    }
+
+    pub async fn first_listing<I: 'static + Send + Sync + IntoIterator<Item = i64>>(
+        &self,
+        blacklist: I,
+        query: String,
+    ) -> anyhow::Result<Option<Listing>> {
+        self.with_db(move |db| {
+            let tx = db.transaction()?;
+            let indices = Rc::new(
+                blacklist
+                    .into_iter()
+                    .map(rusqlite::types::Value::from)
+                    .collect::<Vec<rusqlite::types::Value>>(),
+            );
+            let query = format!(
+                "
+                    SELECT id, website, website_id, price, title, image_blob, star_rating, max_stars, num_reviews
+                    FROM listings
+                    WHERE {} AND id NOT IN rarray(?1)
+                ",
+                query,
+            );
+            let result = tx.query_row(&query, (&indices,), |row| {
+                Ok((
+                    Listing {
+                        website: row.get(1)?,
+                        website_id: row.get(2)?,
+                        price: row.get(3)?,
+                        title: row.get(4)?,
+                        image_data: Vec::default(),
+                        categories: Vec::default(),
+                        star_rating: row.get(6)?,
+                        max_stars: row.get(7)?,
+                        num_reviews: row.get(8)?,
+                    },
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(5)?,
+                ))
+            });
+            match result {
+                Ok((mut listing, listing_id, image_id)) => {
+                    let categories: rusqlite::Result<Vec<String>> = tx
+                        .prepare("SELECT category FROM listings WHERE listing_id=?1")?
+                        .query_map((&listing_id,), |row| row.get(0))?
+                        .into_iter()
+                        .collect();
+                    listing.categories = categories?;
+                    listing.image_data =
+                        tx.query_row("SELECT data FROM blobs WHERE id=?1", (&image_id,), |row| {
+                            row.get(0)
+                        })?;
+                    Ok(Some(listing))
+                }
+                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+                Err(e) => Err(e.into()),
+            }
         })
         .await
     }
