@@ -182,7 +182,7 @@ impl Database {
         .await
     }
 
-    pub async fn first_listing<I: 'static + Send + Sync + IntoIterator<Item = i64>>(
+    pub async fn sample_listing<I: 'static + Send + Sync + IntoIterator<Item = i64>>(
         &self,
         blacklist: I,
         query: String,
