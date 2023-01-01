@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version="1.0" }
+base64 = { version="0.13.1" }
 clap = { version="3.2.20", features=["derive"] }
 flate2 = { version = "1.0.24" }
 futures-util = { version = "0.3.23" }
@@ -13,7 +14,7 @@ hyper = { version = "0.14.20", features=["full"] }
 image = { version="0.24.5" }
 rand = { version="0.8.5", features=["std_rng"] }
 reqwest = { version="0.11.11", default-features = false, features = ["rustls-tls-native-roots"] }
-rusqlite = { version="0.28.0", features = ["bundled"] }
+rusqlite = { version="0.28.0", features = ["bundled", "array"] }
 serde = { version="1.0.151", features = ["derive"] }
 serde_json = { version="1.0" }
 sha2 = { version="0.10.6" }
