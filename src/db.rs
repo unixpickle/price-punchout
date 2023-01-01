@@ -28,6 +28,7 @@ impl Database {
 
     fn new_with_conn(conn: Connection) -> rusqlite::Result<Database> {
         create_tables(&conn)?;
+        rusqlite::vtab::array::load_module(&conn)?;
         Ok(Database {
             db: Arc::new(Mutex::new(conn)),
         })
@@ -197,40 +198,41 @@ impl Database {
             );
             let query = format!(
                 "
-                    SELECT id, website, website_id, price, title, image_blob, star_rating, max_stars, num_reviews
-                    FROM listings
+                    SELECT * FROM listings
                     WHERE {} AND id NOT IN rarray(?1)
+                    ORDER BY RANDOM()
+                    LIMIT 1
                 ",
                 query,
             );
             let result = tx.query_row(&query, (&indices,), |row| {
                 Ok((
                     Listing {
-                        website: row.get(1)?,
-                        website_id: row.get(2)?,
-                        price: row.get(3)?,
-                        title: row.get(4)?,
+                        website: row.get("website")?,
+                        website_id: row.get("website_id")?,
+                        price: row.get("price")?,
+                        title: row.get("title")?,
                         image_data: Vec::default(),
                         categories: Vec::default(),
-                        star_rating: row.get(6)?,
-                        max_stars: row.get(7)?,
-                        num_reviews: row.get(8)?,
+                        star_rating: row.get("star_rating")?,
+                        max_stars: row.get("max_stars")?,
+                        num_reviews: row.get("num_reviews")?,
                     },
-                    row.get::<_, i64>(0)?,
-                    row.get::<_, i64>(5)?,
+                    row.get::<_, i64>("id")?,
+                    row.get::<_, i64>("image_blob")?,
                 ))
             });
             match result {
                 Ok((mut listing, listing_id, image_id)) => {
                     let categories: rusqlite::Result<Vec<String>> = tx
-                        .prepare("SELECT category FROM listings WHERE listing_id=?1")?
-                        .query_map((&listing_id,), |row| row.get(0))?
+                        .prepare("SELECT category FROM categories WHERE listing_id=?1")?
+                        .query_map((&listing_id,), |row| row.get("category"))?
                         .into_iter()
                         .collect();
                     listing.categories = categories?;
                     listing.image_data =
                         tx.query_row("SELECT data FROM blobs WHERE id=?1", (&image_id,), |row| {
-                            row.get(0)
+                            row.get("data")
                         })?;
                     Ok(Some(listing))
                 }
