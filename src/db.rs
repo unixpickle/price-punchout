@@ -9,7 +9,7 @@ use tokio::{sync::Mutex, task::spawn_blocking};
 
 use crate::levels::{Level, LEVELS};
 
-const LOG_EXPIRATION: i64 = 60 * 60 * 24 * 5;
+const LOG_LIMIT: i64 = 5000;
 
 #[derive(Clone)]
 pub struct Database {
@@ -126,8 +126,10 @@ impl Database {
                 (source, message),
             )?;
             tx.execute(
-                "DELETE FROM log WHERE timestamp < unixepoch()-?1",
-                (LOG_EXPIRATION,),
+                "DELETE FROM log WHERE id NOT IN (
+                    SELECT id FROM log ORDER BY timestamp DESC LIMIT ?1
+                )",
+                (LOG_LIMIT,),
             )?;
             tx.commit()
         })
