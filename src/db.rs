@@ -199,9 +199,12 @@ impl Database {
                         "
                             UPDATE listings
                             SET sweep_mark = 1
-                            WHERE {}
-                            ORDER BY last_seen DESC
-                            LIMIT ?1
+                            WHERE id IN (
+                                SELECT id FROM listings
+                                WHERE {}
+                                ORDER BY last_seen DESC
+                                LIMIT ?1
+                            )
                         ",
                         level.listing_query()
                     ),
