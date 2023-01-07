@@ -1,34 +1,35 @@
 pub struct Level {
     pub id: &'static str,
-    pub query: &'static str,
     pub website_name: &'static str,
     pub category_name: &'static str,
+    query: &'static str,
 }
 
 pub const LEVELS: [Level; 2] = [
     Level{
         id: "amazon-if",
+        website_name: "Amazon",
+        category_name: "Interesting Finds",
         query: "website=\"amazon.com\" AND (
             SELECT COUNT(*) FROM categories WHERE categories.listing_id = listings.id AND categories.category = \"interesting-finds\"
         ) > 0",
-        website_name: "Amazon",
-        category_name: "Interesting Finds",
     },
     Level{
         id: "amazon-thi",
-        query: "website = \"amazon.com\" AND (
-            SELECT COUNT(*) FROM categories WHERE categories.listing_id = listings.id AND categories.category = \"hgg-hol-hi\"
-        ) > 0",
         website_name: "Amazon",
         category_name: "Tools and Home Improvement",
+        query: "website=\"amazon.com\" AND (
+            SELECT COUNT(*) FROM categories WHERE categories.listing_id = listings.id AND categories.category = \"interesting-finds\"
+        ) > 0",
     },
 ];
 
-pub fn find_level(id: &str) -> Option<&'static Level> {
-    for level in &LEVELS {
-        if level.id == id {
-            return Some(&level);
-        }
+impl Level {
+    pub fn find_by_id(id: &str) -> Option<&'static Level> {
+        LEVELS.iter().filter(|x| x.id == id).next()
     }
-    None
+
+    pub fn listing_query(&self) -> &'static str {
+        self.query
+    }
 }

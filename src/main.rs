@@ -9,7 +9,7 @@ use clap::Parser;
 use http_util::{api_data_response, api_error_response, read_body};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
-use levels::{find_level, LEVELS};
+use levels::{Level, LEVELS};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::net::SocketAddr;
@@ -118,13 +118,8 @@ async fn handle_request(
 
 async fn non_empty_levels(state: ServerState) -> anyhow::Result<Vec<Value>> {
     let mut levels = Vec::new();
-    for level in LEVELS {
-        if state
-            .db
-            .sample_listing([], level.query.to_owned())
-            .await?
-            .is_some()
-        {
+    for level in &LEVELS {
+        if state.db.sample_listing([], level).await?.is_some() {
             levels.push(Value::Object(
                 [
                     ("id".to_owned(), level.id.to_owned().into()),
@@ -148,12 +143,8 @@ async fn non_empty_levels(state: ServerState) -> anyhow::Result<Vec<Value>> {
 async fn sample_listing(state: ServerState, req: &mut Request<Body>) -> anyhow::Result<Value> {
     let post_data = read_body(req, state.args.max_post_size).await?;
     let req_data: ListingRequest = serde_json::from_slice(&post_data)?;
-    if let Some(level) = find_level(&req_data.level) {
-        match state
-            .db
-            .sample_listing(req_data.seen_ids, level.query.to_owned())
-            .await?
-        {
+    if let Some(level) = Level::find_by_id(&req_data.level) {
+        match state.db.sample_listing(req_data.seen_ids, level).await? {
             Some(item) => Ok(serde_json::to_value(ListingResponse {
                 title: Some(item.title),
                 price: Some(item.price),

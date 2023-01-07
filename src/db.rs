@@ -7,6 +7,8 @@ use rusqlite::{Connection, Transaction};
 use sha2::Digest;
 use tokio::{sync::Mutex, task::spawn_blocking};
 
+use crate::levels::Level;
+
 const LOG_EXPIRATION: i64 = 60 * 60 * 24 * 5;
 
 #[derive(Clone)]
@@ -186,7 +188,7 @@ impl Database {
     pub async fn sample_listing<I: 'static + Send + Sync + IntoIterator<Item = i64>>(
         &self,
         blacklist: I,
-        query: String,
+        level: &'static Level,
     ) -> rusqlite::Result<Option<Listing>> {
         self.with_db(move |db| {
             let tx = db.transaction()?;
@@ -203,7 +205,7 @@ impl Database {
                     ORDER BY RANDOM()
                     LIMIT 1
                 ",
-                query,
+                level.listing_query(),
             );
             let result = tx.query_row(&query, (&indices,), |row| {
                 Ok((
