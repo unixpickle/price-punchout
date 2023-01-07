@@ -3,9 +3,17 @@ use crate::{db::Database, scraper::Client};
 use std::{future::Future, pin::Pin, time::Duration};
 use tokio::time::sleep;
 
+// The frequency with which to check if a source needs to be updated.
+// This is not actually the interval of updates, which is determined by the
+// caller of update_sources_loop().
 const LOOP_CHECK_INTERVAL: Duration = Duration::from_secs(60);
-const ENTRY_EXPIRATION: i64 = 60 * 60 * 24 * 14;
-const AMAZON_MAX_ITEMS: i64 = 50;
+
+// A soft limit to prevent levels from growing unboundedly.
+const MAX_LISTINGS_PER_LEVEL: i64 = 4096;
+
+// This limit is applied to amazon searches to prevent the scraper from
+// fetching too many pages of results.
+const AMAZON_RESULT_LIMIT: i64 = 50;
 
 // A source of retail listing data.
 //
@@ -55,17 +63,17 @@ pub fn default_sources() -> Vec<Box<dyn Source>> {
     vec![
         Box::new(AmazonSource {
             category: "interesting-finds".to_owned(),
-            max_items: AMAZON_MAX_ITEMS,
+            max_items: AMAZON_RESULT_LIMIT,
         }),
         Box::new(AmazonSource {
             // Tools and Home Improvement
             category: "hgg-hol-hi".to_owned(),
-            max_items: AMAZON_MAX_ITEMS,
+            max_items: AMAZON_RESULT_LIMIT,
         }),
         Box::new(AmazonSource {
             // Electronics
             category: "EGGHOL22-Hub".to_owned(),
-            max_items: AMAZON_MAX_ITEMS,
+            max_items: AMAZON_RESULT_LIMIT,
         }),
     ]
 }
@@ -95,7 +103,8 @@ pub async fn update_sources_loop(
             }
         }
         if updated_any {
-            let (purged_listings, purged_blobs) = db.delete_old_listings(ENTRY_EXPIRATION).await?;
+            let (purged_listings, purged_blobs) =
+                db.delete_old_listings(MAX_LISTINGS_PER_LEVEL).await?;
             log_async!(
                 &db,
                 "ran delete cycle: {} listings and {} blobs deleted.",

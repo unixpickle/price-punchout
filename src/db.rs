@@ -7,7 +7,7 @@ use rusqlite::{Connection, Transaction};
 use sha2::Digest;
 use tokio::{sync::Mutex, task::spawn_blocking};
 
-use crate::levels::Level;
+use crate::levels::{Level, LEVELS};
 
 const LOG_EXPIRATION: i64 = 60 * 60 * 24 * 5;
 
@@ -163,15 +163,52 @@ impl Database {
         .await
     }
 
-    // Delete listings that haven't been updated in more than timeout seconds.
-    // Returns the number of listings and blobs that were deleted.
-    pub async fn delete_old_listings(&self, timeout: i64) -> rusqlite::Result<(usize, usize)> {
+    // Delete old listings in categories that have more than enough
+    // listings. Retains listings which are needed for some category
+    // when that category is sorted by last seen date.
+    //
+    // Returns (deleted listings, deleted blobs).
+    pub async fn delete_old_listings(
+        &self,
+        category_capacity: i64,
+    ) -> rusqlite::Result<(usize, usize)> {
         self.with_db(move |db| {
             let tx = db.transaction()?;
-            let listing_count = tx.execute(
-                "DELETE FROM listings WHERE last_seen+?1 < unixepoch()",
-                (timeout,),
-            )?;
+
+            // Retain listings that are not in any levels, since they
+            // won't be updated and don't pose a leak threat as a result.
+            tx.execute("UPDATE listings SET sweep_mark = 1", ())?;
+
+            // By default, every listing contained with a level is dropped.
+            for level in LEVELS {
+                tx.execute(
+                    &format!(
+                        "UPDATE listings SET sweep_mark = 0 WHERE {}",
+                        level.listing_query()
+                    ),
+                    (),
+                )?;
+            }
+
+            // Explicitly mark the latest listings of every level to be retained.
+            for level in LEVELS {
+                tx.execute(
+                    &format!(
+                        "
+                            UPDATE listings
+                            SET sweep_mark = 1
+                            WHERE {}
+                            ORDER BY last_seen DESC
+                            LIMIT ?1
+                        ",
+                        level.listing_query()
+                    ),
+                    (category_capacity,),
+                )?;
+            }
+
+            let listing_count = tx.execute("DELETE FROM listings WHERE sweep_mark = 0", ())?;
+
             let blob_count = tx.execute(
                 "
                     DELETE FROM blobs WHERE (
@@ -293,6 +330,7 @@ fn create_tables(conn: &Connection) -> rusqlite::Result<()> {
             star_rating  REAL,
             max_stars    REAL,
             num_reviews  INTEGER,
+            sweep_mark   INT,
             UNIQUE (website, website_id)
         )",
         (),
