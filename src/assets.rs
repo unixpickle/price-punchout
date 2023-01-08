@@ -2,13 +2,9 @@ use std::path::PathBuf;
 
 use hyper::header::CONTENT_TYPE;
 use hyper::{Body, Response};
-use tokio::{
-    fs::File,
-    io::{self, AsyncReadExt},
-};
+use tokio::io;
 
 // TODO(alex): currently, the '/' path separator is assumed.
-
 macro_rules! asset_pair {
     ($path:expr) => {
         ($path, include_bytes!(concat!("assets/", $path)))
@@ -65,16 +61,13 @@ pub async fn asset_response<'a>(asset_dir: &'a Option<String>, name: &'a str) ->
 
 async fn read_asset_data<'a>(asset_dir: &'a Option<String>, name: &'a str) -> io::Result<Vec<u8>> {
     if let Some(asset_dir) = asset_dir.as_deref() {
-        let mut f = File::open(
+        tokio::fs::read(
             [asset_dir]
                 .into_iter()
                 .chain(name.split("/"))
                 .collect::<PathBuf>(),
         )
-        .await?;
-        let mut out = Vec::new();
-        f.read_buf(&mut out).await?;
-        Ok(out)
+        .await
     } else {
         return ASSETS
             .iter()
