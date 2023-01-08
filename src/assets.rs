@@ -18,9 +18,9 @@ const ASSETS: &'static [(&'static str, &'static [u8])] = &[
     asset_pair!("style.css"),
     asset_pair!("favicon.ico"),
     asset_pair!("js/script.js"),
-    asset_pair!("js/deps/babel5.8.23.js"),
-    asset_pair!("js/deps/react15.3.2.js"),
-    asset_pair!("js/deps/react-dom15.3.2.js"),
+    asset_pair!("js/deps/babel-standalone@6.26.0.js"),
+    asset_pair!("js/deps/react-dom@18.2.0.js"),
+    asset_pair!("js/deps/react@18.2.0.js"),
     asset_pair!("svg/gloves.svg"),
 ];
 
