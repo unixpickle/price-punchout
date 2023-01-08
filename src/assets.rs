@@ -50,10 +50,14 @@ pub async fn asset_response<'a>(asset_dir: &'a Option<String>, name: &'a str) ->
     }
     match data {
         Ok(bytes) => {
-            let mut resp = Response::new(Body::from(bytes));
-            resp.headers_mut()
-                .insert(CONTENT_TYPE, mime_type.parse().unwrap());
-            resp
+            let mut resp = Response::builder().header(CONTENT_TYPE, mime_type);
+            if asset_dir.is_some() {
+                resp = resp
+                    .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                    .header("Pragma", "no-cache")
+                    .header("Expires", "0");
+            }
+            resp.body(Body::from(bytes)).unwrap()
         }
         Err(e) => Response::new(Body::from(format!("{}", e).into_bytes())),
     }
