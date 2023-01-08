@@ -104,7 +104,7 @@ async fn handle_request(
     state: ServerState,
 ) -> Result<Response<Body>, Infallible> {
     let response = match req.uri().path() {
-        "" | "/" => Response::new(Body::from(include_str!("assets/index.html"))),
+        "" | "/" => asset_response(&state.args.asset_dir, "index.html").await,
         "/api/levels" => match non_empty_levels(&state).await {
             Ok(levels) => api_data_response(Value::Array(levels)),
             Err(e) => api_error_response("list levels", e),
