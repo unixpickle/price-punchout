@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::process::ExitCode;
 
+use crate::assets::asset_response;
 use crate::db::Database;
 use crate::http_util::maybe_compress_response;
 use crate::scraper::Client;
@@ -17,6 +18,7 @@ use std::time::Duration;
 use tokio::spawn;
 
 mod amazon;
+mod assets;
 mod db;
 mod http_util;
 mod levels;
@@ -26,6 +28,9 @@ mod sources;
 
 #[derive(Clone, Parser)]
 pub struct Args {
+    #[clap(short, long)]
+    asset_dir: Option<String>,
+
     #[clap(short, long, value_parser, default_value_t = 60*60*24)]
     update_interval: u64,
 
@@ -100,23 +105,20 @@ async fn handle_request(
 ) -> Result<Response<Body>, Infallible> {
     let response = match req.uri().path() {
         "" | "/" => Response::new(Body::from(include_str!("assets/index.html"))),
-        "/style.css" => Response::new(Body::from(include_str!("assets/style.css"))),
-        "/script.js" => Response::new(Body::from(include_str!("assets/script.js"))),
-        "/favicon.ico" => Response::new(Body::from(include_bytes!("assets/favicon.ico").to_vec())),
-        "/api/levels" => match non_empty_levels(state).await {
+        "/api/levels" => match non_empty_levels(&state).await {
             Ok(levels) => api_data_response(Value::Array(levels)),
             Err(e) => api_error_response("list levels", e),
         },
-        "/api/sample" => match sample_listing(state, &mut req).await {
+        "/api/sample" => match sample_listing(&state, &mut req).await {
             Ok(levels) => api_data_response(levels),
             Err(e) => api_error_response("sample listing", e),
         },
-        _ => Response::new(Body::from(include_str!("assets/not_found.html"))),
+        path => asset_response(&state.args.asset_dir, &path).await,
     };
     maybe_compress_response(&req, response).await
 }
 
-async fn non_empty_levels(state: ServerState) -> anyhow::Result<Vec<Value>> {
+async fn non_empty_levels(state: &ServerState) -> anyhow::Result<Vec<Value>> {
     let mut levels = Vec::new();
     for level in &LEVELS {
         if state.db.sample_listing([], level).await?.is_some() {
@@ -140,7 +142,7 @@ async fn non_empty_levels(state: ServerState) -> anyhow::Result<Vec<Value>> {
     Ok(levels)
 }
 
-async fn sample_listing(state: ServerState, req: &mut Request<Body>) -> anyhow::Result<Value> {
+async fn sample_listing(state: &ServerState, req: &mut Request<Body>) -> anyhow::Result<Value> {
     let post_data = read_body(req, state.args.max_post_size).await?;
     let req_data: ListingRequest = serde_json::from_slice(&post_data)?;
     if let Some(level) = Level::find_by_id(&req_data.level) {
