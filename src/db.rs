@@ -227,6 +227,23 @@ impl Database {
         .await
     }
 
+    // Get the epoch time of the last modified listing in a level.
+    // If the level has no listings, returns None.
+    pub async fn level_last_seen(&self, level: &'static Level) -> rusqlite::Result<Option<i64>> {
+        self.with_db(move |db| {
+            let query = format!(
+                "SELECT MAX(last_seen) FROM listings WHERE {}",
+                level.listing_query()
+            );
+            match db.query_row(&query, (), |row| row.get(0)) {
+                Ok(time) => Ok(Some(time)),
+                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+                Err(e) => Err(e),
+            }
+        })
+        .await
+    }
+
     pub async fn sample_listing<I: 'static + Send + Sync + IntoIterator<Item = i64>>(
         &self,
         blacklist: I,

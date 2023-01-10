@@ -115,13 +115,17 @@ async fn handle_request(
         },
         path => asset_response(&state.args.asset_dir, &path).await,
     };
-    maybe_compress_response(&req, response).await
+    let response = maybe_compress_response(&req, response).await;
+    log_response(&state.db, &req, &response)
+        .await
+        .expect("logging response should always work");
+    Ok(response)
 }
 
 async fn non_empty_levels(state: &ServerState) -> anyhow::Result<Vec<Value>> {
     let mut levels = Vec::new();
     for level in &LEVELS {
-        if state.db.sample_listing([], level).await?.is_some() {
+        if let Some(last_seen) = state.db.level_last_seen(level).await? {
             levels.push(Value::Object(
                 [
                     ("id".to_owned(), level.id.to_owned().into()),
@@ -133,6 +137,7 @@ async fn non_empty_levels(state: &ServerState) -> anyhow::Result<Vec<Value>> {
                         "category_name".to_owned(),
                         level.category_name.to_owned().into(),
                     ),
+                    ("last_seen".to_owned(), last_seen.into()),
                 ]
                 .into_iter()
                 .collect(),
