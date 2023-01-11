@@ -1,4 +1,4 @@
-use std::{convert::Infallible, fmt::Display, io::Write};
+use std::{fmt::Display, io::Write};
 
 use flate2::{write::GzEncoder, Compression};
 use futures_util::{StreamExt, TryStreamExt};
@@ -7,7 +7,28 @@ use hyper::{Body, Request, Response};
 use serde::Serialize;
 use tokio::task::spawn_blocking;
 
+use crate::{db::Database, log_async};
+
 const ERROR_PAGE: &str = include_str!("assets/internal_error.html");
+
+pub async fn log_response(
+    db: &Database,
+    req: &Request<Body>,
+    response: &Response<Body>,
+) -> anyhow::Result<()> {
+    let mut req_url = req.uri().to_string();
+    req_url.truncate(128);
+
+    let method = req.method().to_string();
+    log_async!(
+        db,
+        "{} {} => {}",
+        method,
+        req_url,
+        response.status().as_u16()
+    );
+    Ok(())
+}
 
 pub async fn read_body(req: &mut Request<Body>, max_size: usize) -> anyhow::Result<Vec<u8>> {
     let mut data = Vec::new();

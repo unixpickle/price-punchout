@@ -7,7 +7,7 @@ use crate::http_util::maybe_compress_response;
 use crate::scraper::Client;
 use crate::sources::{default_sources, update_sources_loop};
 use clap::Parser;
-use http_util::{api_data_response, api_error_response, read_body};
+use http_util::{api_data_response, api_error_response, log_response, read_body};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use levels::{Level, LEVELS};
@@ -87,7 +87,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
         }
     });
 
-    println!("creating server at {}...", addr);
+    log_async!(&db, "creating server at {}...", addr);
     Server::bind(&addr).serve(make_service).await?;
 
     Ok(())
