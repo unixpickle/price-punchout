@@ -45,7 +45,7 @@ pub async fn read_body(req: &mut Request<Body>, max_size: usize) -> anyhow::Resu
 pub async fn maybe_compress_response(
     req: &Request<Body>,
     mut resp: Response<Body>,
-) -> Result<Response<Body>, Infallible> {
+) -> Response<Body> {
     let is_api = resp.headers().get("content-type")
         == Some(&HeaderValue::from_str("application/json").unwrap());
     let accept_gzip = req
@@ -57,7 +57,7 @@ pub async fn maybe_compress_response(
         .map(|x| x.split(";").next().unwrap())
         .any(|x| x == "gzip");
     if !accept_gzip {
-        Ok(resp)
+        resp
     } else {
         let pieces = resp
             .body_mut()
@@ -65,7 +65,7 @@ pub async fn maybe_compress_response(
             .await
             .into_iter()
             .collect::<hyper::Result<Vec<hyper::body::Bytes>>>();
-        Ok(match pieces {
+        match pieces {
             Err(e) => error_response(is_api, "compressing body", e),
             Ok(data) => spawn_blocking(move || -> Response<Body> {
                 let mut e = GzEncoder::new(Vec::new(), Compression::default());
@@ -81,7 +81,7 @@ pub async fn maybe_compress_response(
             })
             .await
             .unwrap_or_else(|e| error_response(is_api, "compressing body", e)),
-        })
+        }
     }
 }
 

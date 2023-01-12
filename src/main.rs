@@ -76,7 +76,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
     });
 
     let addr = SocketAddr::from(([0, 0, 0, 0], args.port));
-    let state = ServerState { args, db };
+    let state = ServerState {
+        args,
+        db: db.clone(),
+    };
     let make_service = make_service_fn(move |_conn| {
         let state_clone = state.clone();
         async move {
