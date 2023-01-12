@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! log_async {
-    ($db:expr, $formatstr:expr, $($args:tt),*) => {{
+    ($db:expr, $formatstr:expr, $($args:expr),*) => {{
         let source = format!("{}:{}", file!(), line!());
         let message = format!($formatstr, $($args),*);
         eprintln!("{}: {}", source, message);
