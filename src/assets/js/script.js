@@ -45,6 +45,6 @@ function Error(props) {
 }
 
 ReactDOM.render(
-    React.createElement(App),
+    <App />,
     document.getElementById('root'),
 );
