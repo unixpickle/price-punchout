@@ -45,9 +45,22 @@ function App() {
                 }}
                 onBack={() => setPage('levelWebsite')} />
         ]
+    } else if (page === 'levelPlayers') {
+        return [
+            <Header />,
+            <PlayersPicker
+                onChoice={(count) => {
+                    setNumPlayers(count);
+                    setPage('loadingListing');
+                }}
+                onBack={() => setPage('levelCategory')} />
+        ]
+    } else if (page === 'loadingListing') {
+        // TODO: request a listing.
+        return [<Header />, <Loader />];
     }
 
-    return Header();
+    return <Header />;
 }
 
 function Header() {
@@ -76,7 +89,9 @@ function WebsitePicker(props) {
         </li>
     ));
     return <div class="content-pane">
-        <h1>Select website</h1>
+        <div class="content-pane-header">
+            <h1>Select website</h1>
+        </div>
         <div class="choice-list-container">
             <ul class="choice-list">{items}</ul>
         </div>
@@ -102,8 +117,10 @@ function CategoryPicker(props) {
         </li>
     ));
     return <div class="content-pane">
-        <button class="back-button" onClick={props.onBack}>Back</button>
-        <h1>Select category</h1>
+        <div class="content-pane-header">
+            <button class="back-button" onClick={props.onBack}>Back</button>
+            <h1>Select category</h1>
+        </div>
         <div class="choice-list-container">
             <ul class="choice-list">{items}</ul>
         </div>
@@ -118,6 +135,31 @@ function levelIcon(level) {
     } else {
         return '/svg/unknown.svg';
     }
+}
+
+function PlayersPicker(props) {
+    const [numPlayers, setNumPlayers] = React.useState('2');
+    const parsed = parseInt(numPlayers);
+    const valid = (
+        !isNaN(parsed) &&
+        parsed.toString() == numPlayers.trim() &&
+        parsed > 1 &&
+        parsed < 100
+    );
+    return <div class="content-pane">
+        <div class="content-pane-header">
+            <button class="back-button" onClick={props.onBack}>Back</button>
+            <h1>How many players?</h1>
+        </div>
+        <input
+            class={valid ? "player-count-input" : "player-count-input player-count-input-invalid"}
+            value={numPlayers}
+            type="number"
+            onChange={(e) => setNumPlayers(e.target.value)} />
+        <button
+            class={valid ? "ok-button" : "ok-button ok-button-disabled"}
+            onClick={valid ? props.onChoice : () => null}>Play!</button>
+    </div>;
 }
 
 ReactDOM.render(
