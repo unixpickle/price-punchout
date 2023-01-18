@@ -2,7 +2,7 @@ const client = new APIClient();
 
 function App() {
     //    loadingLevels => levelWebsite => levelCategory => levelPlayers
-    // => loadingListing => showingListing => guessing => results
+    // => loadingListing => guessing | noListings => results
     const [page, setPage] = React.useState('loadingLevels');
     const [error, setError] = React.useState(null);
     const [levels, setLevels] = React.useState(null);
@@ -51,13 +51,30 @@ function App() {
             <PlayersPicker
                 onChoice={(count) => {
                     setNumPlayers(count);
+                    setScoreboard([]);
                     setPage('loadingListing');
                 }}
                 onBack={() => setPage('levelCategory')} />
         ]
     } else if (page === 'loadingListing') {
-        // TODO: request a listing.
+        client.sampleListing(selectedLevel.id).then((listing) => {
+            if (listing.title === null) {
+                setPage('noListings');
+                return;
+            }
+            setCurrentListing(listing);
+            setCurrentGuesses([]);
+            setPage('guessing');
+        }).catch((e) => {
+            setError(e.toString());
+            setPage('error');
+        })
         return [<Header />, <Loader />];
+    } else if (page === 'noListings') {
+        // TODO: show scoreboard here.
+        return [<Header />, <Error message="No listings remain in this category." />]
+    } else if (page === 'guessing') {
+        return [<Header />, 'guessing for listing ' + currentListing];
     }
 
     return <Header />;

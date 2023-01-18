@@ -169,6 +169,7 @@ async fn sample_listing(state: &ServerState, req: &mut Request<Body>) -> anyhow:
 
 #[derive(Deserialize)]
 struct ListingRequest {
+    #[serde(rename(deserialize = "seenIDs"))]
     seen_ids: Vec<i64>,
     level: String,
 }
