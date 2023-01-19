@@ -158,7 +158,11 @@ async fn sample_listing(state: &ServerState, req: &mut Request<Body>) -> anyhow:
             Some(item) => Ok(serde_json::to_value(ListingResponse {
                 title: Some(item.title),
                 price: Some(item.price),
-                image_data: Some(base64::encode(item.image_data)),
+                // TODO(alex): detect MIME type of image data here
+                image_url: Some(format!(
+                    "data:image/jpeg;base64,{}",
+                    base64::encode(item.image_data)
+                )),
             })?),
             None => Ok(serde_json::to_value(ListingResponse::default())?),
         }
@@ -178,5 +182,7 @@ struct ListingRequest {
 struct ListingResponse {
     title: Option<String>,
     price: Option<i64>,
-    image_data: Option<String>,
+
+    #[serde(rename(serialize = "imageURL"))]
+    image_url: Option<String>,
 }

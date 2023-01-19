@@ -155,7 +155,8 @@ input:focus {
     background-color: #f0f0f0;
 }
 
-.player-count-input {
+.player-count-input,
+.product-price-guess {
     display: block;
     width: 100%;
     height: 40px;
@@ -169,15 +170,18 @@ input:focus {
     text-align: center;
 }
 
-.player-count-input:focus {
+.player-count-input:focus,
+.product-price-guess:focus {
     border: 2px solid #65bcd4;
 }
 
-.player-count-input-invalid {
+.player-count-input-invalid,
+.product-price-guess-invalid {
     border: 2px solid #d46565;
 }
 
-.player-count-input-invalid:focus {
+.player-count-input-invalid:focus,
+.product-price-guess-invalid:focus {
     border: 2px solid #d46565;
 }
 
@@ -199,4 +203,26 @@ input:focus {
 .ok-button-disabled {
     opacity: 0.5;
     pointer-events: none;
+}
+
+.product-listing {
+    display: table;
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.product-listing-thumbnail-container {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.product-listing-thumbnail {
+    max-width: 80px;
+    max-height: 80px;
+}
+
+.product-listing-text {
+    display: table-cell;
+    vertical-align: middle;
+    padding-left: 16px;
 }

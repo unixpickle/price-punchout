@@ -24,7 +24,7 @@ class APIClient {
             },
             body: JSON.stringify(requestObject),
         }));
-        return new APIListing(data.title, data.price, data.imageData);
+        return new APIListing(data.title, data.price, data.imageURL);
     }
 
     async _getResult(respPromise) {
@@ -57,10 +57,10 @@ class APILevel {
 }
 
 class APIListing {
-    constructor(title, price, imageData) {
+    constructor(title, price, imageURL) {
         this.title = title;
         this.price = price;
-        this.imageData = imageData;
+        this.imageURL = imageURL;
     }
 }
 

@@ -11,6 +11,7 @@ function App() {
     const [selectedLevel, setSelectedLevel] = React.useState(null);
     const [numPlayers, setNumPlayers] = React.useState(2);
     const [currentListing, setCurrentListing] = React.useState(null);
+    const [currentGuessValue, setCurrentGuessValue] = React.useState('');
     const [currentGuesses, setCurrentGuesses] = React.useState(null);
     const [scoreboard, setScoreboard] = React.useState(null);
 
@@ -74,7 +75,19 @@ function App() {
         // TODO: show scoreboard here.
         return [<Header />, <Error message="No listings remain in this category." />]
     } else if (page === 'guessing') {
-        return [<Header />, 'guessing for listing ' + currentListing];
+        const player = 1 + currentGuesses.length;
+        return [
+            <Header />,
+            <GuessPicker
+                player={player}
+                listing={currentListing}
+                value={currentGuessValue}
+                onChange={(e) => setCurrentGuessValue(e.target.value)}
+                onChoice={() => {
+                    setCurrentGuesses(currentGuesses.concat([currentGuessValue]));
+                    setCurrentGuessValue('');
+                }} />
+        ];
     }
 
     return <Header />;
@@ -128,9 +141,9 @@ function CategoryPicker(props) {
     const items = levels.sort().map((level) => (
         <li class="choice-list-item" onClick={() => props.onChoice(level)}>
             <img class="choice-list-item-icon" src={levelIcon(level)}></img>
-            <label class="choice-list-item-text">
+            <div class="choice-list-item-text">
                 <p>{level.category}</p>
-            </label>
+            </div>
         </li>
     ));
     return <div class="content-pane">
@@ -175,7 +188,46 @@ function PlayersPicker(props) {
             onChange={(e) => setNumPlayers(e.target.value)} />
         <button
             class={valid ? "ok-button" : "ok-button ok-button-disabled"}
-            onClick={valid ? props.onChoice : () => null}>Play!</button>
+            onClick={() => {
+                if (valid) {
+                    props.onChoice(parsed);
+                }
+            }}>Play!</button>
+    </div>;
+}
+
+function GuessPicker(props) {
+    const price = props.value;
+    const parsed = parseFloat(price);
+    const valid = (
+        !isNaN(parsed) &&
+        parsed.toString() == price.trim() &&
+        parsed > 0
+    );
+
+    return <div class="content-pane">
+        <div class="content-pane-header">
+            <h1>Guess for Player {props.player}</h1>
+        </div>
+        <div class="product-listing">
+            <div class="product-listing-thumbnail-container">
+                <img class="product-listing-thumbnail" src={props.listing.imageURL} />
+            </div>
+            <p class="product-listing-text">{props.listing.title}</p>
+        </div>
+        <input
+            class={"product-price-guess " + ((valid || !price) ? "" : "product-price-guess-invalid")}
+            value={price}
+            type="number"
+            placeholder={"Guess for Player " + props.player}
+            onChange={props.onChange} />
+        <button
+            class={valid ? "ok-button" : "ok-button ok-button-disabled"}
+            onClick={() => {
+                if (valid) {
+                    props.onChoice(parsed);
+                }
+            }}>Submit</button>
     </div>;
 }
 
