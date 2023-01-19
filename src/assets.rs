@@ -5,9 +5,18 @@ use hyper::{Body, Response};
 use tokio::io;
 
 // TODO(alex): currently, the '/' path separator is assumed.
+macro_rules! path_join {
+    ($x:expr) => {
+        $x
+    };
+    ($x:expr, $($y:expr),+) => {
+        concat!($x, "/", path_join!($($y),*))
+    };
+}
+
 macro_rules! asset_pair {
     ($path:expr) => {
-        ($path, include_bytes!(concat!("assets/", $path)))
+        ($path, include_bytes!(path_join!("assets", $path)))
     };
 }
 
@@ -17,12 +26,18 @@ const ASSETS: &'static [(&'static str, &'static [u8])] = &[
     asset_pair!("not_found.html"),
     asset_pair!("style.css"),
     asset_pair!("favicon.ico"),
-    asset_pair!("js/api.js"),
-    asset_pair!("js/script.js"),
-    asset_pair!("js/deps/babel-standalone@6.26.0.js"),
-    asset_pair!("js/deps/react-dom@18.2.0.js"),
-    asset_pair!("js/deps/react@18.2.0.js"),
-    asset_pair!("svg/gloves.svg"),
+    asset_pair!(path_join!("js", "api.js")),
+    asset_pair!(path_join!("js", "script.js")),
+    asset_pair!(path_join!("js", "deps", "babel-standalone@6.26.0.js")),
+    asset_pair!(path_join!("js", "deps", "react-dom@18.2.0.js")),
+    asset_pair!(path_join!("js", "deps", "react@18.2.0.js")),
+    asset_pair!(path_join!("svg", "amazon_box.svg")),
+    asset_pair!(path_join!("svg", "back.svg")),
+    asset_pair!(path_join!("svg", "calculator.svg")),
+    asset_pair!(path_join!("svg", "gloves.svg")),
+    asset_pair!(path_join!("svg", "list_bg.svg")),
+    asset_pair!(path_join!("svg", "loader.svg")),
+    asset_pair!(path_join!("svg", "treasure_chest.svg")),
 ];
 
 pub async fn asset_response<'a>(asset_dir: &'a Option<String>, name: &'a str) -> Response<Body> {
