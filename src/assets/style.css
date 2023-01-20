@@ -226,3 +226,26 @@ input:focus {
     vertical-align: middle;
     padding-left: 16px;
 }
+
+.scoreboard-table {
+    margin: auto;
+    border-collapse: collapse;
+    font-size: 22px;
+    margin-bottom: 10px;
+}
+
+.scoreboard-table td {
+    padding: 8px;
+}
+
+.scoreboard-table tr:nth-child(odd) {
+    background-color: #f0f0f0;
+}
+
+.scoreboard-table td:first-child {
+    text-align: right;
+}
+
+.scoreboard-table td:last-child {
+    text-align: left;
+}

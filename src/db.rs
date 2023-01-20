@@ -248,7 +248,7 @@ impl Database {
         &self,
         blacklist: I,
         level: &'static Level,
-    ) -> rusqlite::Result<Option<Listing>> {
+    ) -> rusqlite::Result<Option<(Listing, i64)>> {
         self.with_db(move |db| {
             let tx = db.transaction()?;
             let indices = Rc::new(
@@ -295,7 +295,7 @@ impl Database {
                         tx.query_row("SELECT data FROM blobs WHERE id=?1", (&image_id,), |row| {
                             row.get("data")
                         })?;
-                    Ok(Some(listing))
+                    Ok(Some((listing, listing_id)))
                 }
                 Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
                 Err(e) => Err(e),

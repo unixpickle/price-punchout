@@ -2,7 +2,7 @@ const client = new APIClient();
 
 function App() {
     //    loadingLevels => levelWebsite => levelCategory => levelPlayers
-    // => loadingListing => guessing | noListings => results
+    // => loadingListing => guessing | noListings => scoreboard
     const [page, setPage] = React.useState('loadingLevels');
     const [error, setError] = React.useState(null);
     const [levels, setLevels] = React.useState(null);
@@ -13,7 +13,7 @@ function App() {
     const [currentListing, setCurrentListing] = React.useState(null);
     const [currentGuessValue, setCurrentGuessValue] = React.useState('');
     const [currentGuesses, setCurrentGuesses] = React.useState(null);
-    const [scoreboard, setScoreboard] = React.useState(null);
+    const [roundResults, setRoundResults] = React.useState([]);
 
     if (page === 'loadingLevels') {
         client.levels().then((levels) => {
@@ -52,7 +52,7 @@ function App() {
             <PlayersPicker
                 onChoice={(count) => {
                     setNumPlayers(count);
-                    setScoreboard([]);
+                    setRoundResults([]);
                     setPage('loadingListing');
                 }}
                 onBack={() => setPage('levelCategory')} />
@@ -84,8 +84,24 @@ function App() {
                 value={currentGuessValue}
                 onChange={(e) => setCurrentGuessValue(e.target.value)}
                 onChoice={() => {
-                    setCurrentGuesses(currentGuesses.concat([currentGuessValue]));
+                    const newGuesses = currentGuesses.concat([currentGuessValue]);
+                    setCurrentGuesses(newGuesses);
                     setCurrentGuessValue('');
+                    if (player === numPlayers) {
+                        client.idTracker.add(currentListing.id);
+                        const result = new RoundResult(currentListing, newGuesses);
+                        setRoundResults(roundResults.concat([result]));
+                        setPage('scoreboard');
+                    }
+                }} />
+        ];
+    } else if (page === 'scoreboard') {
+        return [
+            <Header />,
+            <Scoreboard
+                roundResults={roundResults}
+                onNext={() => {
+                    setPage('loadingListing');
                 }} />
         ];
     }
@@ -229,6 +245,64 @@ function GuessPicker(props) {
                 }
             }}>Submit</button>
     </div>;
+}
+
+function Scoreboard(props) {
+    const results = props.roundResults;
+    const numPlayers = results[0].guesses.length;
+    console.log('num players', numPlayers);
+    const scores = [];
+    for (let i = 0; i < numPlayers; ++i) {
+        scores[i] = 0;
+    }
+    results.forEach((result) => {
+        const winners = result.winners();
+        winners.forEach((i) => {
+            scores[i] += 1 / winners.length;
+        });
+    })
+
+    const rows = scores.map((x, i) => {
+        return <tr>
+            <td>Player {i}</td>
+            <td>{x}</td>
+        </tr>;
+    });
+
+    return <div class="content-pane">
+        <div class="content-pane-header">
+            <h1>Scoreboard</h1>
+        </div>
+        <table class="scoreboard-table">
+            {rows}
+        </table>
+        <button
+            class="ok-button"
+            onClick={props.onNext}>Next</button>
+    </div>;
+}
+
+class RoundResult {
+    constructor(listing, guesses) {
+        this.listing = listing;
+        this.guesses = guesses;
+    }
+
+    winners() {
+        let bestGuess = Infinity;
+        let indices = [];
+        this.guesses.forEach((x, i) => {
+            const err = Math.abs(x - this.listing.price / 100);
+            const bestErr = Math.abs(bestGuess - this.listing.price / 100);
+            if (err < bestErr) {
+                bestGuess = x;
+                indices = [i];
+            } else if (err === bestErr) {
+                indices.push(i);
+            }
+        });
+        return indices;
+    }
 }
 
 ReactDOM.render(

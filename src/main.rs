@@ -155,7 +155,8 @@ async fn sample_listing(state: &ServerState, req: &mut Request<Body>) -> anyhow:
     let req_data: ListingRequest = serde_json::from_slice(&post_data)?;
     if let Some(level) = Level::find_by_id(&req_data.level) {
         match state.db.sample_listing(req_data.seen_ids, level).await? {
-            Some(item) => Ok(serde_json::to_value(ListingResponse {
+            Some((item, id)) => Ok(serde_json::to_value(ListingResponse {
+                id: id,
                 title: Some(item.title),
                 price: Some(item.price),
                 // TODO(alex): detect MIME type of image data here
@@ -180,6 +181,7 @@ struct ListingRequest {
 
 #[derive(Default, Serialize)]
 struct ListingResponse {
+    id: i64,
     title: Option<String>,
     price: Option<i64>,
 

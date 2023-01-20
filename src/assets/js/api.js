@@ -24,7 +24,7 @@ class APIClient {
             },
             body: JSON.stringify(requestObject),
         }));
-        return new APIListing(data.title, data.price, data.imageURL);
+        return new APIListing(data.id, data.title, data.price, data.imageURL);
     }
 
     async _getResult(respPromise) {
@@ -57,7 +57,8 @@ class APILevel {
 }
 
 class APIListing {
-    constructor(title, price, imageURL) {
+    constructor(id, title, price, imageURL) {
+        this.id = id;
         this.title = title;
         this.price = price;
         this.imageURL = imageURL;
@@ -85,6 +86,6 @@ class UsedIDTracker {
 
     add(id) {
         this._seenIDs.push(id);
-        this.localStorage.seenIDs = JSON.stringify(this.seenIDs());
+        localStorage.seenIDs = JSON.stringify(this.seenIDs());
     }
 }
