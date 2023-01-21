@@ -19,7 +19,7 @@ pub const LEVELS: [Level; 2] = [
         website_name: "Amazon",
         category_name: "Tools and Home Improvement",
         query: "website=\"amazon.com\" AND (
-            SELECT COUNT(*) FROM categories WHERE categories.listing_id = listings.id AND categories.category = \"interesting-finds\"
+            SELECT COUNT(*) FROM categories WHERE categories.listing_id = listings.id AND categories.category = \"hgg-hol-hi\"
         ) > 0",
     },
 ];

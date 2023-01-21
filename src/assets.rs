@@ -75,7 +75,10 @@ pub async fn asset_response<'a>(asset_dir: &'a Option<String>, name: &'a str) ->
     }
 }
 
-async fn read_asset_data<'a>(asset_dir: &'a Option<String>, name: &'a str) -> io::Result<Vec<u8>> {
+pub async fn read_asset_data<'a>(
+    asset_dir: &'a Option<String>,
+    name: &'a str,
+) -> io::Result<Vec<u8>> {
     if let Some(asset_dir) = asset_dir.as_deref() {
         tokio::fs::read(
             [asset_dir]
