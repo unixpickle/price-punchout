@@ -1,7 +1,11 @@
+use assets::read_asset_data;
+use hyper::header::CONTENT_TYPE;
+use rand::thread_rng;
 use std::convert::Infallible;
 use std::process::ExitCode;
 
 use crate::assets::asset_response;
+use crate::bg::Background;
 use crate::db::Database;
 use crate::http_util::maybe_compress_response;
 use crate::scraper::Client;
@@ -19,6 +23,7 @@ use tokio::spawn;
 
 mod amazon;
 mod assets;
+mod bg;
 mod db;
 mod http_util;
 mod levels;
@@ -107,7 +112,7 @@ async fn handle_request(
     state: ServerState,
 ) -> Result<Response<Body>, Infallible> {
     let response = match req.uri().path() {
-        "" | "/" => asset_response(&state.args.asset_dir, "index.html").await,
+        "" | "/" => homepage(&state).await,
         "/api/levels" => match non_empty_levels(&state).await {
             Ok(levels) => api_data_response(Value::Array(levels)),
             Err(e) => api_error_response("list levels", e),
@@ -123,6 +128,24 @@ async fn handle_request(
         .await
         .expect("logging response should always work");
     Ok(response)
+}
+
+async fn homepage(state: &ServerState) -> Response<Body> {
+    match read_asset_data(&state.args.asset_dir, "index.html").await {
+        Ok(bytes) => {
+            let bg = Background::sample(&mut thread_rng());
+            let mut bytes_str: String = String::from_utf8_lossy(&bytes).into();
+            bytes_str = bytes_str.replace("<!--BACKGROUND_HTML-->", &bg.html);
+            bytes_str = bytes_str.replace("/*BACKGROUND_CSS*/", &bg.css);
+            let mut resp = Response::builder().header(CONTENT_TYPE, "text/html");
+            resp = resp
+                .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                .header("Pragma", "no-cache")
+                .header("Expires", "0");
+            resp.body(Body::from(bytes_str)).unwrap()
+        }
+        Err(e) => Response::new(Body::from(format!("{}", e).into_bytes())),
+    }
 }
 
 async fn non_empty_levels(state: &ServerState) -> anyhow::Result<Vec<Value>> {

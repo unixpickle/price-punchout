@@ -7,6 +7,30 @@ body {
     color: #555;
 }
 
+#background {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+
+.background-piece {
+    position: fixed;
+    text-align: center;
+    color: #ddd;
+    display: table;
+}
+
+.background-piece::before {
+    content: '$';
+    display: table-cell;
+    vertical-align: middle;
+}
+
+#root {
+    position: absolute;
+    width: 100%;
+}
+
 button:focus,
 input:focus {
     outline: 0;
@@ -67,7 +91,7 @@ input:focus {
 .content-pane-header>h1 {
     display: block;
     margin: 0 auto 8px auto;
-    font-size: 1.5em;
+    font-size: 22px;
     padding: 0;
     text-align: center;
     max-width: calc(100% - 80px);

@@ -261,7 +261,6 @@ function GuessPicker(props) {
 function Scoreboard(props) {
     const results = props.roundResults;
     const numPlayers = results[0].guesses.length;
-    console.log('num players', numPlayers);
     const scores = [];
     for (let i = 0; i < numPlayers; ++i) {
         scores[i] = 0;
@@ -320,3 +319,12 @@ ReactDOM.render(
     <App />,
     document.getElementById('root'),
 );
+
+function setupBackground() {
+    const bg = document.getElementById('background');
+    const size = Math.max(window.innerWidth, window.innerHeight);
+    bg.style.fontSize = size.toFixed(2) + 'px';
+}
+
+setupBackground();
+window.addEventListener('resize', setupBackground);
