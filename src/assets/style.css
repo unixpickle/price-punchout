@@ -251,25 +251,49 @@ input:focus {
     padding-left: 16px;
 }
 
-.scoreboard-table {
+.product-price-answer {
+    font-size: 22px;
+    font-weight: bolder;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.product-price-answer::before {
+    content: 'Answer: ';
+    font-weight: normal;
+}
+
+.product-price-guesses-label {
+    display: block;
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 22px;
+}
+
+.scoreboard-table,
+.guesses-table {
     margin: auto;
     border-collapse: collapse;
     font-size: 22px;
     margin-bottom: 10px;
 }
 
-.scoreboard-table td {
+.scoreboard-table td,
+.guesses-table td {
     padding: 8px;
 }
 
-.scoreboard-table tr:nth-child(odd) {
+.scoreboard-table tr:nth-child(odd),
+.guesses-table tr:nth-child(odd) {
     background-color: #f0f0f0;
 }
 
-.scoreboard-table td:first-child {
+.scoreboard-table td:first-child,
+.guesses-table td:first-child {
     text-align: right;
 }
 
-.scoreboard-table td:last-child {
+.scoreboard-table td:last-child,
+.guesses-table td:last-child {
     text-align: left;
 }

@@ -2,7 +2,7 @@ const client = new APIClient();
 
 function App() {
     //    loadingLevels => levelWebsite => levelCategory => levelPlayers
-    // => loadingListing => guessing | noListings => scoreboard
+    // => loadingListing => guessing | noListings => guesses => scoreboard
     const [page, setPage] = React.useState('loadingLevels');
     const [error, setError] = React.useState(null);
     const [levels, setLevels] = React.useState(null);
@@ -91,18 +91,24 @@ function App() {
                         client.idTracker.add(currentListing.id);
                         const result = new RoundResult(currentListing, newGuesses);
                         setRoundResults(roundResults.concat([result]));
-                        setPage('scoreboard');
+                        setPage('guesses');
                     }
                 }} />
+        ];
+    } else if (page === 'guesses') {
+        return [
+            <Header />,
+            <Guesses
+                listing={currentListing}
+                lastResults={roundResults[roundResults.length - 1]}
+                onNext={() => setPage('scoreboard')} />
         ];
     } else if (page === 'scoreboard') {
         return [
             <Header />,
             <Scoreboard
                 roundResults={roundResults}
-                onNext={() => {
-                    setPage('loadingListing');
-                }} />
+                onNext={() => setPage('loadingListing')} />
         ];
     }
 
@@ -258,6 +264,39 @@ function GuessPicker(props) {
     </div>;
 }
 
+function Guesses(props) {
+    const results = props.lastResults;
+
+    const rows = results.guesses.map((x, i) => {
+        return <tr>
+            <td>Player {i + 1}</td>
+            <td>${x}</td>
+        </tr>;
+    });
+
+    return <div class="content-pane">
+        <div class="content-pane-header">
+            <h1>Guesses</h1>
+        </div>
+        <div class="product-listing">
+            <div class="product-listing-thumbnail-container">
+                <img class="product-listing-thumbnail" src={props.listing.imageURL} />
+            </div>
+            <p class="product-listing-text">{props.listing.title}</p>
+        </div>
+        <label class="product-price-guesses-label">Guesses:</label>
+        <table class="guesses-table">
+            {rows}
+        </table>
+        <div class="product-price-answer">
+            {"$" + (props.listing.price / 100).toFixed(2)}
+        </div>
+        <button
+            class="ok-button"
+            onClick={props.onNext}>Next</button>
+    </div>;
+}
+
 function Scoreboard(props) {
     const results = props.roundResults;
     const numPlayers = results[0].guesses.length;
@@ -274,8 +313,8 @@ function Scoreboard(props) {
 
     const rows = scores.map((x, i) => {
         return <tr>
-            <td>Player {i}</td>
-            <td>{x}</td>
+            <td>Player {i + 1}</td>
+            <td>{x} points</td>
         </tr>;
     });
 
