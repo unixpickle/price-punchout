@@ -201,6 +201,11 @@ function PlayersPicker(props) {
             class={valid ? "player-count-input" : "player-count-input player-count-input-invalid"}
             value={numPlayers}
             type="number"
+            onKeyUp={(e) => {
+                if (valid && e.key === 'Enter') {
+                    props.onChoice(parsed);
+                }
+            }}
             onChange={(e) => setNumPlayers(e.target.value)} />
         <button
             class={valid ? "ok-button" : "ok-button ok-button-disabled"}
@@ -235,6 +240,12 @@ function GuessPicker(props) {
             class={"product-price-guess " + ((valid || !price) ? "" : "product-price-guess-invalid")}
             value={price}
             type="number"
+            autoFocus
+            onKeyUp={(e) => {
+                if (valid && e.key === 'Enter') {
+                    props.onChoice(parsed);
+                }
+            }}
             placeholder={"Guess for Player " + props.player}
             onChange={props.onChange} />
         <button
