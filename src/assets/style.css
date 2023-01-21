@@ -75,6 +75,11 @@ input:focus {
     }
 }
 
+.error {
+    text-align: center;
+    color: #c84949;
+}
+
 .content-pane {
     position: relative;
     width: 300px;

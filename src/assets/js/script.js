@@ -72,8 +72,20 @@ function App() {
         })
         return [<Header />, <Loader />];
     } else if (page === 'noListings') {
-        // TODO: show scoreboard here.
-        return [<Header />, <Error message="No listings remain in this category." />]
+        if (roundResults.length > 0) {
+            return [
+                <Header />,
+                <Scoreboard
+                    roundResults={roundResults}
+                    done={true}
+                    onNewGame={() => setPage('loadingLevels')} />
+            ];
+        } else {
+            return [
+                <Header />,
+                <Error message="There are no more items in this level" />
+            ];
+        }
     } else if (page === 'guessing') {
         const player = 1 + currentGuesses.length;
         return [
@@ -108,6 +120,7 @@ function App() {
             <Header />,
             <Scoreboard
                 roundResults={roundResults}
+                done={false}
                 onNext={() => setPage('loadingListing')} />
         ];
     }
@@ -318,16 +331,26 @@ function Scoreboard(props) {
         </tr>;
     });
 
+    const nextButton = (
+        <button
+            class="ok-button"
+            onClick={props.onNext}>Next</button>
+    );
+    const doneButton = (
+        <button
+            class="ok-button"
+            onClick={props.onNewGame}>New game</button>
+    );
+
     return <div class="content-pane">
         <div class="content-pane-header">
             <h1>Scoreboard</h1>
         </div>
+        {props.done ? <p class="error">There are no more items in this level</p> : null}
         <table class="scoreboard-table">
             {rows}
         </table>
-        <button
-            class="ok-button"
-            onClick={props.onNext}>Next</button>
+        {props.done ? doneButton : nextButton}
     </div>;
 }
 
