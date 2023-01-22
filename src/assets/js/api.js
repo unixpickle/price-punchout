@@ -2,29 +2,55 @@ class APIClient {
     constructor() {
         this.base = '/api';
         this.idTracker = new UsedIDTracker();
+
+        this._isFetchingLevels = false;
+        this._isSamplingListing = false;
     }
 
     async levels() {
-        const data = await this._getResult(fetch(this.base + '/levels'));
-        return data.map((x) => {
-            return new APILevel(x['website_name'], x['category_name'], x['id'], x['last_seen']);
-        });
+        if (this._isFetchingLevels) {
+            return false;
+        }
+        this._isFetchingLevels = true;
+        try {
+            const requestObject = {
+                seenIDs: this.idTracker.seenIDs(),
+            };
+            const data = await this._postObject(this.base + '/levels', requestObject);
+            return data.map((x) => {
+                return new APILevel(x['website_name'], x['category_name'], x['id'], x['count']);
+            });
+        } finally {
+            this._isFetchingLevels = false;
+        }
     }
 
     async sampleListing(levelID) {
-        const requestObject = {
-            seenIDs: this.idTracker.seenIDs(),
-            level: levelID,
-        };
-        const data = await this._getResult(fetch(this.base + '/sample?', {
+        if (this._isSamplingListing) {
+            return false;
+        }
+        this._isSamplingListing = true;
+        try {
+            const requestObject = {
+                seenIDs: this.idTracker.seenIDs(),
+                level: levelID,
+            };
+            const data = await this._postObject(this.base + '/sample', requestObject);
+            return new APIListing(data.id, data.title, data.price, data.imageURL);
+        } finally {
+            this._isSamplingListing = false;
+        }
+    }
+
+    async _postObject(url, object) {
+        return await this._getResult(fetch(url, {
             method: 'POST',
             cache: 'no-cache',
             headers: {
                 'content-type': 'application/json',
             },
-            body: JSON.stringify(requestObject),
+            body: JSON.stringify(object),
         }));
-        return new APIListing(data.id, data.title, data.price, data.imageURL);
     }
 
     async _getResult(respPromise) {
@@ -48,11 +74,11 @@ class APIClient {
 }
 
 class APILevel {
-    constructor(website, category, id, lastSeen) {
+    constructor(website, category, id, count) {
         this.website = website;
         this.category = category;
         this.id = id;
-        this.lastSeen = lastSeen;
+        this.count = count;
     }
 }
 

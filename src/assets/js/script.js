@@ -17,8 +17,10 @@ function App() {
 
     if (page === 'loadingLevels') {
         client.levels().then((levels) => {
-            setLevels(levels);
-            setPage('levelWebsite');
+            if (page === 'loadingLevels') {
+                setLevels(levels);
+                setPage('levelWebsite');
+            }
         }).catch((e) => {
             setError(e.toString());
             setPage('error');

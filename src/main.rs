@@ -113,7 +113,7 @@ async fn handle_request(
 ) -> Result<Response<Body>, Infallible> {
     let response = match req.uri().path() {
         "" | "/" => homepage(&state).await,
-        "/api/levels" => match non_empty_levels(&state).await {
+        "/api/levels" => match non_empty_levels(&state, &mut req).await {
             Ok(levels) => api_data_response(Value::Array(levels)),
             Err(e) => api_error_response("list levels", e),
         },
@@ -148,10 +148,20 @@ async fn homepage(state: &ServerState) -> Response<Body> {
     }
 }
 
-async fn non_empty_levels(state: &ServerState) -> anyhow::Result<Vec<Value>> {
+async fn non_empty_levels(
+    state: &ServerState,
+    req: &mut Request<Body>,
+) -> anyhow::Result<Vec<Value>> {
+    let post_data = read_body(req, state.args.max_post_size).await?;
+    let req_data: LevelsRequest = serde_json::from_slice(&post_data)?;
+
     let mut levels = Vec::new();
     for level in &LEVELS {
-        if let Some(last_seen) = state.db.level_last_seen(level).await? {
+        let count = state
+            .db
+            .level_count(req_data.seen_ids.clone(), level)
+            .await?;
+        if count > 0 {
             levels.push(Value::Object(
                 [
                     ("id".to_owned(), level.id.to_owned().into()),
@@ -163,7 +173,7 @@ async fn non_empty_levels(state: &ServerState) -> anyhow::Result<Vec<Value>> {
                         "category_name".to_owned(),
                         level.category_name.to_owned().into(),
                     ),
-                    ("last_seen".to_owned(), last_seen.into()),
+                    ("count".to_owned(), count.into()),
                 ]
                 .into_iter()
                 .collect(),
@@ -193,6 +203,12 @@ async fn sample_listing(state: &ServerState, req: &mut Request<Body>) -> anyhow:
     } else {
         Err(anyhow::Error::msg("no level found with the supplied ID"))
     }
+}
+
+#[derive(Deserialize)]
+struct LevelsRequest {
+    #[serde(rename(deserialize = "seenIDs"))]
+    seen_ids: Vec<i64>,
 }
 
 #[derive(Deserialize)]

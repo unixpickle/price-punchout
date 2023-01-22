@@ -227,19 +227,17 @@ impl Database {
         .await
     }
 
-    // Get the epoch time of the last modified listing in a level.
-    // If the level has no listings, returns None.
-    pub async fn level_last_seen(&self, level: &'static Level) -> rusqlite::Result<Option<i64>> {
+    pub async fn level_count<I: 'static + Send + Sync + IntoIterator<Item = i64>>(
+        &self,
+        blacklist: I,
+        level: &'static Level,
+    ) -> rusqlite::Result<i64> {
         self.with_db(move |db| {
             let query = format!(
-                "SELECT MAX(last_seen) FROM listings WHERE {}",
+                "SELECT COUNT(*) FROM listings WHERE {} AND id NOT IN rarray(?1)",
                 level.listing_query()
             );
-            match db.query_row(&query, (), |row| row.get(0)) {
-                Ok(time) => Ok(Some(time)),
-                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-                Err(e) => Err(e),
-            }
+            db.query_row(&query, (&values_to_rarray(blacklist),), |row| row.get(0))
         })
         .await
     }
@@ -251,12 +249,6 @@ impl Database {
     ) -> rusqlite::Result<Option<(Listing, i64)>> {
         self.with_db(move |db| {
             let tx = db.transaction()?;
-            let indices = Rc::new(
-                blacklist
-                    .into_iter()
-                    .map(rusqlite::types::Value::from)
-                    .collect::<Vec<rusqlite::types::Value>>(),
-            );
             let query = format!(
                 "
                     SELECT * FROM listings
@@ -266,7 +258,7 @@ impl Database {
                 ",
                 level.listing_query(),
             );
-            let result = tx.query_row(&query, (&indices,), |row| {
+            let result = tx.query_row(&query, (&values_to_rarray(blacklist),), |row| {
                 Ok((
                     Listing {
                         website: row.get("website")?,
@@ -450,6 +442,20 @@ fn insert_categories(
         )?;
     }
     Ok(())
+}
+
+fn values_to_rarray<T, I: 'static + Send + Sync + IntoIterator<Item = T>>(
+    blacklist: I,
+) -> Rc<Vec<rusqlite::types::Value>>
+where
+    rusqlite::types::Value: From<T>,
+{
+    Rc::new(
+        blacklist
+            .into_iter()
+            .map(rusqlite::types::Value::from)
+            .collect::<Vec<rusqlite::types::Value>>(),
+    )
 }
 
 fn hash_blob(data: &[u8]) -> String {
