@@ -1,133 +1,164 @@
 const client = new APIClient();
 
-function App() {
-    //    loadingLevels => levelWebsite => levelCategory => levelPlayers
-    // => loadingListing => guessing | noListings => guesses => scoreboard
-    const [page, setPage] = React.useState('loadingLevels');
-    const [error, setError] = React.useState(null);
-    const [levels, setLevels] = React.useState(null);
+class App extends React.Component {
+    constructor() {
+        super()
+        this.state = {
+            page: 'loadingLevels',
+            error: null,
+            levels: null,
+            levelWebsite: null,
+            selectedLevel: null,
+            numPlayers: null,
+            currentListing: null,
+            currentGuessValue: null,
+            currentGuesses: null,
+            roundResults: null,
+        }
+    }
 
-    const [levelWebsite, setLevelWebsite] = React.useState(null);
-    const [selectedLevel, setSelectedLevel] = React.useState(null);
-    const [numPlayers, setNumPlayers] = React.useState(2);
-    const [currentListing, setCurrentListing] = React.useState(null);
-    const [currentGuessValue, setCurrentGuessValue] = React.useState('');
-    const [currentGuesses, setCurrentGuesses] = React.useState(null);
-    const [roundResults, setRoundResults] = React.useState([]);
+    render() {
+        // Flow of pages looks like:
+        //
+        //    loadingLevels => levelWebsite => levelCategory => levelPlayers
+        // => loadingListing => guessing | noListings => guesses => scoreboard
+        //
 
-    if (page === 'loadingLevels') {
-        client.levels().then((levels) => {
-            if (page === 'loadingLevels') {
-                setLevels(levels);
-                setPage('levelWebsite');
+        if (this.state.page === 'loadingLevels') {
+            client.levels().then((levels) => {
+                if (this.state.page === 'loadingLevels') {
+                    this.setState({
+                        page: 'levelWebsite',
+                        levels: levels,
+                    });
+                }
+            }).catch((e) => {
+                this.showError(e.toString());
+            })
+            return [<Header />, <Loader />];
+        } else if (this.state.page === 'error') {
+            return [<Header />, <Error message={error} />];
+        } else if (this.state.page === 'levelWebsite') {
+            return [
+                <Header />,
+                <WebsitePicker levels={this.state.levels} onChoice={(website) => {
+                    this.setState({
+                        page: 'levelCategory',
+                        levelWebsite: website,
+                    });
+                }} />,
+            ];
+        } else if (this.state.page === 'levelCategory') {
+            return [
+                <Header />,
+                <CategoryPicker
+                    levels={this.state.levels}
+                    website={this.state.levelWebsite}
+                    onChoice={(level) => {
+                        this.setState({
+                            page: 'levelPlayers',
+                            selectedLevel: level,
+                            numPlayers: 2,
+                        });
+                    }}
+                    onBack={() => setPage('levelWebsite')} />
+            ]
+        } else if (this.state.page === 'levelPlayers') {
+            return [
+                <Header />,
+                <PlayersPicker
+                    onChoice={(count) => {
+                        this.setState({
+                            page: 'loadingListing',
+                            numPlayers: count,
+                            roundResults: [],
+                        })
+                    }}
+                    onBack={() => setPage('levelCategory')} />
+            ]
+        } else if (this.state.page === 'loadingListing') {
+            client.sampleListing(this.state.selectedLevel.id).then((listing) => {
+                if (listing.title === null) {
+                    this.setState({ page: 'noListings' });
+                    return;
+                }
+                this.setState({
+                    page: 'guessing',
+                    currentListing: listing,
+                    currentGuesses: [],
+                    currentGuessValue: '',
+                })
+            }).catch((e) => {
+                this.showError(e.toString());
+            });
+            return [<Header />, <Loader />];
+        } else if (this.state.page === 'noListings') {
+            if (this.state.roundResults.length > 0) {
+                return [
+                    <Header />,
+                    <Scoreboard
+                        roundResults={this.state.roundResults}
+                        done={true}
+                        onNewGame={() => this.setState({ page: 'loadingLevels' })} />
+                ];
+            } else {
+                this.showError('There are no more items in this level');
             }
-        }).catch((e) => {
-            setError(e.toString());
-            setPage('error');
-        })
-        return [<Header />, <Loader />];
-    } else if (page === 'error') {
-        return [<Header />, <Error message={error} />];
-    } else if (page === 'levelWebsite') {
-        return [
-            <Header />,
-            <WebsitePicker levels={levels} onChoice={(website) => {
-                setLevelWebsite(website);
-                setPage('levelCategory');
-            }} />,
-        ];
-    } else if (page === 'levelCategory') {
-        return [
-            <Header />,
-            <CategoryPicker
-                levels={levels}
-                website={levelWebsite}
-                onChoice={(level) => {
-                    setSelectedLevel(level);
-                    setPage('levelPlayers');
-                }}
-                onBack={() => setPage('levelWebsite')} />
-        ]
-    } else if (page === 'levelPlayers') {
-        return [
-            <Header />,
-            <PlayersPicker
-                onChoice={(count) => {
-                    setNumPlayers(count);
-                    setRoundResults([]);
-                    setPage('loadingListing');
-                }}
-                onBack={() => setPage('levelCategory')} />
-        ]
-    } else if (page === 'loadingListing') {
-        client.sampleListing(selectedLevel.id).then((listing) => {
-            if (listing.title === null) {
-                setPage('noListings');
-                return;
-            }
-            setCurrentListing(listing);
-            setCurrentGuesses([]);
-            setPage('guessing');
-        }).catch((e) => {
-            setError(e.toString());
-            setPage('error');
-        })
-        return [<Header />, <Loader />];
-    } else if (page === 'noListings') {
-        if (roundResults.length > 0) {
+        } else if (this.state.page === 'guessing') {
+            const player = 1 + this.state.currentGuesses.length;
+            return [
+                <Header />,
+                <GuessPicker
+                    player={player}
+                    listing={this.state.currentListing}
+                    value={this.state.currentGuessValue}
+                    onChange={(e) => this.setState({ currentGuessValue: e.target.value })}
+                    onChoice={(guess) => {
+                        const newGuesses = this.state.currentGuesses.concat([guess]);
+                        if (player === this.state.numPlayers) {
+                            client.idTracker.add(this.state.currentListing.id);
+                            const result = new RoundResult(this.state.currentListing, newGuesses);
+                            this.setState({
+                                page: 'guesses',
+                                currentGuessValue: '',
+                                currentGuesses: [],
+                                roundResults: this.state.roundResults.concat([result]),
+                            });
+                        } else {
+                            this.setState({
+                                currentGuessValue: '',
+                                currentGuesses: newGuesses,
+                            });
+                        }
+                    }} />
+            ];
+        } else if (this.state.page === 'guesses') {
+            return [
+                <Header />,
+                <Guesses
+                    listing={this.state.currentListing}
+                    lastResults={this.state.roundResults[this.state.roundResults.length - 1]}
+                    onNext={() => this.setState({ page: 'scoreboard' })} />
+            ];
+        } else if (this.state.page === 'scoreboard') {
             return [
                 <Header />,
                 <Scoreboard
-                    roundResults={roundResults}
-                    done={true}
-                    onNewGame={() => setPage('loadingLevels')} />
-            ];
-        } else {
-            return [
-                <Header />,
-                <Error message="There are no more items in this level" />
+                    roundResults={this.state.roundResults}
+                    done={false}
+                    onNext={() => this.setState({ page: 'loadingListing' })} />
             ];
         }
-    } else if (page === 'guessing') {
-        const player = 1 + currentGuesses.length;
-        return [
-            <Header />,
-            <GuessPicker
-                player={player}
-                listing={currentListing}
-                value={currentGuessValue}
-                onChange={(e) => setCurrentGuessValue(e.target.value)}
-                onChoice={() => {
-                    const newGuesses = currentGuesses.concat([currentGuessValue]);
-                    setCurrentGuesses(newGuesses);
-                    setCurrentGuessValue('');
-                    if (player === numPlayers) {
-                        client.idTracker.add(currentListing.id);
-                        const result = new RoundResult(currentListing, newGuesses);
-                        setRoundResults(roundResults.concat([result]));
-                        setPage('guesses');
-                    }
-                }} />
-        ];
-    } else if (page === 'guesses') {
-        return [
-            <Header />,
-            <Guesses
-                listing={currentListing}
-                lastResults={roundResults[roundResults.length - 1]}
-                onNext={() => setPage('scoreboard')} />
-        ];
-    } else if (page === 'scoreboard') {
-        return [
-            <Header />,
-            <Scoreboard
-                roundResults={roundResults}
-                done={false}
-                onNext={() => setPage('loadingListing')} />
-        ];
+
+        return <Header />;
     }
 
-    return <Header />;
+    showError(e) {
+        this.setState({
+            page: 'error',
+            error: e,
+        });
+    }
 }
 
 function Header() {
