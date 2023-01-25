@@ -25,129 +25,25 @@ class App extends React.Component {
         //
 
         if (this.state.page === 'loadingLevels') {
-            client.levels().then((levels) => {
-                if (this.state.page === 'loadingLevels') {
-                    this.setState({
-                        page: 'levelWebsite',
-                        levels: levels,
-                    });
-                }
-            }).catch((e) => {
-                this.showError(e.toString());
-            })
-            return [<Header />, <Loader />];
+            return this.renderLoadingLevels();
         } else if (this.state.page === 'error') {
-            return [<Header />, <Error message={error} />];
+            return this.renderError();
         } else if (this.state.page === 'levelWebsite') {
-            return [
-                <Header />,
-                <WebsitePicker levels={this.state.levels} onChoice={(website) => {
-                    this.setState({
-                        page: 'levelCategory',
-                        levelWebsite: website,
-                    });
-                }} />,
-            ];
+            return this.renderLevelWebsite();
         } else if (this.state.page === 'levelCategory') {
-            return [
-                <Header />,
-                <CategoryPicker
-                    levels={this.state.levels}
-                    website={this.state.levelWebsite}
-                    onChoice={(level) => {
-                        this.setState({
-                            page: 'levelPlayers',
-                            selectedLevel: level,
-                            numPlayers: 2,
-                        });
-                    }}
-                    onBack={() => setPage('levelWebsite')} />
-            ]
+            return this.renderLevelCategory();
         } else if (this.state.page === 'levelPlayers') {
-            return [
-                <Header />,
-                <PlayersPicker
-                    onChoice={(count) => {
-                        this.setState({
-                            page: 'loadingListing',
-                            numPlayers: count,
-                            roundResults: [],
-                        })
-                    }}
-                    onBack={() => setPage('levelCategory')} />
-            ]
+            return this.renderLevelPlayers();
         } else if (this.state.page === 'loadingListing') {
-            client.sampleListing(this.state.selectedLevel.id).then((listing) => {
-                if (listing.title === null) {
-                    this.setState({ page: 'noListings' });
-                    return;
-                }
-                this.setState({
-                    page: 'guessing',
-                    currentListing: listing,
-                    currentGuesses: [],
-                    currentGuessValue: '',
-                })
-            }).catch((e) => {
-                this.showError(e.toString());
-            });
-            return [<Header />, <Loader />];
+            return this.renderLoadingListing();
         } else if (this.state.page === 'noListings') {
-            if (this.state.roundResults.length > 0) {
-                return [
-                    <Header />,
-                    <Scoreboard
-                        roundResults={this.state.roundResults}
-                        done={true}
-                        onNewGame={() => this.setState({ page: 'loadingLevels' })} />
-                ];
-            } else {
-                this.showError('There are no more items in this level');
-            }
+            return this.renderNoListings();
         } else if (this.state.page === 'guessing') {
-            const player = 1 + this.state.currentGuesses.length;
-            return [
-                <Header />,
-                <GuessPicker
-                    player={player}
-                    listing={this.state.currentListing}
-                    value={this.state.currentGuessValue}
-                    onChange={(e) => this.setState({ currentGuessValue: e.target.value })}
-                    onChoice={(guess) => {
-                        const newGuesses = this.state.currentGuesses.concat([guess]);
-                        if (player === this.state.numPlayers) {
-                            client.idTracker.add(this.state.currentListing.id);
-                            const result = new RoundResult(this.state.currentListing, newGuesses);
-                            this.setState({
-                                page: 'guesses',
-                                currentGuessValue: '',
-                                currentGuesses: [],
-                                roundResults: this.state.roundResults.concat([result]),
-                            });
-                        } else {
-                            this.setState({
-                                currentGuessValue: '',
-                                currentGuesses: newGuesses,
-                            });
-                        }
-                    }} />
-            ];
+            return this.renderGuessing();
         } else if (this.state.page === 'guesses') {
-            return [
-                <Header />,
-                <Guesses
-                    listing={this.state.currentListing}
-                    lastResults={this.state.roundResults[this.state.roundResults.length - 1]}
-                    onNext={() => this.setState({ page: 'scoreboard' })} />
-            ];
+            return this.renderGuesses();
         } else if (this.state.page === 'scoreboard') {
-            return [
-                <Header />,
-                <Scoreboard
-                    roundResults={this.state.roundResults}
-                    done={false}
-                    onNext={() => this.setState({ page: 'loadingListing' })} />
-            ];
+            return this.renderScoreboard();
         }
 
         return <Header />;
@@ -158,6 +54,150 @@ class App extends React.Component {
             page: 'error',
             error: e,
         });
+    }
+
+    renderLoadingLevels() {
+        client.levels().then((levels) => {
+            if (this.state.page === 'loadingLevels') {
+                this.setState({
+                    page: 'levelWebsite',
+                    levels: levels,
+                });
+            }
+        }).catch((e) => {
+            this.showError(e.toString());
+        })
+        return [<Header />, <Loader />];
+    }
+
+    renderError() {
+        return [<Header />, <Error message={error} />];
+    }
+
+    renderLevelWebsite() {
+        return [
+            <Header />,
+            <WebsitePicker levels={this.state.levels} onChoice={(website) => {
+                this.setState({
+                    page: 'levelCategory',
+                    levelWebsite: website,
+                });
+            }} />,
+        ];
+    }
+
+    renderLevelCategory() {
+        return [
+            <Header />,
+            <CategoryPicker
+                levels={this.state.levels}
+                website={this.state.levelWebsite}
+                onChoice={(level) => {
+                    this.setState({
+                        page: 'levelPlayers',
+                        selectedLevel: level,
+                        numPlayers: 2,
+                    });
+                }}
+                onBack={() => setPage('levelWebsite')} />
+        ];
+    }
+
+    renderLevelPlayers() {
+        return [
+            <Header />,
+            <PlayersPicker
+                onChoice={(count) => {
+                    this.setState({
+                        page: 'loadingListing',
+                        numPlayers: count,
+                        roundResults: [],
+                    })
+                }}
+                onBack={() => setPage('levelCategory')} />
+        ];
+    }
+
+    renderLoadingListing() {
+        client.sampleListing(this.state.selectedLevel.id).then((listing) => {
+            if (listing.title === null) {
+                this.setState({ page: 'noListings' });
+                return;
+            }
+            this.setState({
+                page: 'guessing',
+                currentListing: listing,
+                currentGuesses: [],
+                currentGuessValue: '',
+            })
+        }).catch((e) => {
+            this.showError(e.toString());
+        });
+        return [<Header />, <Loader />];
+    }
+
+    renderNoListings() {
+        if (this.state.roundResults.length > 0) {
+            return [
+                <Header />,
+                <Scoreboard
+                    roundResults={this.state.roundResults}
+                    done={true}
+                    onNewGame={() => this.setState({ page: 'loadingLevels' })} />
+            ];
+        } else {
+            this.showError('There are no more items in this level');
+        }
+    }
+
+    renderGuessing() {
+        const player = 1 + this.state.currentGuesses.length;
+        return [
+            <Header />,
+            <GuessPicker
+                player={player}
+                listing={this.state.currentListing}
+                value={this.state.currentGuessValue}
+                onChange={(e) => this.setState({ currentGuessValue: e.target.value })}
+                onChoice={(guess) => {
+                    const newGuesses = this.state.currentGuesses.concat([guess]);
+                    if (player === this.state.numPlayers) {
+                        client.idTracker.add(this.state.currentListing.id);
+                        const result = new RoundResult(this.state.currentListing, newGuesses);
+                        this.setState({
+                            page: 'guesses',
+                            currentGuessValue: '',
+                            currentGuesses: [],
+                            roundResults: this.state.roundResults.concat([result]),
+                        });
+                    } else {
+                        this.setState({
+                            currentGuessValue: '',
+                            currentGuesses: newGuesses,
+                        });
+                    }
+                }} />
+        ];
+    }
+
+    renderGuesses() {
+        return [
+            <Header />,
+            <Guesses
+                listing={this.state.currentListing}
+                lastResults={this.state.roundResults[this.state.roundResults.length - 1]}
+                onNext={() => this.setState({ page: 'scoreboard' })} />
+        ];
+    }
+
+    renderScoreboard() {
+        return [
+            <Header />,
+            <Scoreboard
+                roundResults={this.state.roundResults}
+                done={false}
+                onNext={() => this.setState({ page: 'loadingListing' })} />
+        ];
     }
 }
 
