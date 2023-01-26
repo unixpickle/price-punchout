@@ -7,7 +7,7 @@ use hyper::{Body, Request, Response};
 use serde::Serialize;
 use tokio::task::spawn_blocking;
 
-use crate::{db::Database, log_async};
+use crate::{db::Database, log_async, log_error_async};
 
 const ERROR_PAGE: &str = include_str!("assets/internal_error.html");
 
@@ -73,7 +73,9 @@ pub async fn maybe_compress_response(
                     e.write_all(&part).unwrap();
                 }
                 let compressed_bytes = e.finish().unwrap();
-                let mut builder = Response::builder().header("content-encoding", "gzip");
+                let mut builder = Response::builder()
+                    .status(resp.status())
+                    .header("content-encoding", "gzip");
                 for (k, v) in resp.headers().iter() {
                     builder = builder.header(k, v);
                 }
@@ -85,7 +87,18 @@ pub async fn maybe_compress_response(
     }
 }
 
-pub fn api_data_response<T: Serialize>(data: T) -> Response<Body> {
+pub async fn api_response<T: Serialize, E: std::fmt::Display>(
+    db: &Database,
+    name: &str,
+    result: Result<T, E>,
+) -> rusqlite::Result<Response<Body>> {
+    match log_error_async!(db, format!("api error: {}", name), result) {
+        Ok(levels) => Ok(api_data_response(levels)),
+        Err(e) => Ok(api_error_response(name, e)),
+    }
+}
+
+fn api_data_response<T: Serialize>(data: T) -> Response<Body> {
     match serde_json::to_vec(&DataResponse { data }) {
         Ok(encoded) => Response::builder()
             .header("content-type", "application/json")
@@ -103,7 +116,7 @@ pub fn error_response<E: Display>(is_api: bool, ctx: &str, err: E) -> Response<B
     }
 }
 
-pub fn api_error_response<E: Display>(ctx: &str, err: E) -> Response<Body> {
+fn api_error_response<E: Display>(ctx: &str, err: E) -> Response<Body> {
     Response::builder()
         .status(StatusCode::INTERNAL_SERVER_ERROR)
         .header("content-type", "application/json")

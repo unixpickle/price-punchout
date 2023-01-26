@@ -71,7 +71,7 @@ class App extends React.Component {
     }
 
     renderError() {
-        return [<Header />, <Error message={error} />];
+        return [<Header />, <Error message={this.state.error} />];
     }
 
     renderLevelWebsite() {

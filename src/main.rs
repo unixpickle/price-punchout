@@ -11,7 +11,7 @@ use crate::http_util::maybe_compress_response;
 use crate::scraper::Client;
 use crate::sources::{default_sources, update_sources_loop};
 use clap::Parser;
-use http_util::{api_data_response, api_error_response, log_response, read_body};
+use http_util::{api_response, log_response, read_body};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use levels::{Level, LEVELS};
@@ -113,14 +113,20 @@ async fn handle_request(
 ) -> Result<Response<Body>, Infallible> {
     let response = match req.uri().path() {
         "" | "/" => homepage(&state).await,
-        "/api/levels" => match non_empty_levels(&state, &mut req).await {
-            Ok(levels) => api_data_response(Value::Array(levels)),
-            Err(e) => api_error_response("list levels", e),
-        },
-        "/api/sample" => match sample_listing(&state, &mut req).await {
-            Ok(levels) => api_data_response(levels),
-            Err(e) => api_error_response("sample listing", e),
-        },
+        "/api/levels" => api_response(
+            &state.db,
+            "list levels",
+            non_empty_levels(&state, &mut req).await,
+        )
+        .await
+        .unwrap(),
+        "/api/sample" => api_response(
+            &state.db,
+            "sample listing",
+            sample_listing(&state, &mut req).await,
+        )
+        .await
+        .unwrap(),
         path => asset_response(&state.args.asset_dir, &path).await,
     };
     let response = maybe_compress_response(&req, response).await;
