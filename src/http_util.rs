@@ -87,6 +87,20 @@ pub async fn maybe_compress_response(
     }
 }
 
+pub fn detect_image_mime(data: &[u8]) -> Option<&'static str> {
+    if data.starts_with(&[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]) {
+        Some("image/png")
+    } else if data.starts_with(&[0xff, 0xd8, 0xff]) {
+        Some("image/jpeg")
+    } else if data.starts_with(b"GIF87a") || data.starts_with(b"GIF89a") {
+        Some("image/gif")
+    } else if data.starts_with(b"RIFF") && data.len() > 8 + 7 && data[8..].starts_with(b"WEBPVP8") {
+        Some("image/webp")
+    } else {
+        None
+    }
+}
+
 pub async fn api_response<T: Serialize, E: std::fmt::Display>(
     db: &Database,
     name: &str,
