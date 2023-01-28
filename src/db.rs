@@ -253,7 +253,7 @@ impl Database {
                 "
                     SELECT * FROM listings
                     WHERE {} AND id NOT IN rarray(?1)
-                    ORDER BY RANDOM()
+                    ORDER BY -round(last_seen / (60*60*24)), RANDOM()
                     LIMIT 1
                 ",
                 level.listing_query(),
