@@ -311,10 +311,18 @@ function PlayersPicker(props) {
 
 function GuessPicker(props) {
     const price = props.value;
-    const parsed = parseFloat(price);
+
+    let trimmed = price.trim();
+    if (/[0-9]+\.[1-9]0/.test(price)) {
+        trimmed = price.substr(0, price.length - 1);
+    } else if (/[0-9]+\.00?/.test(price)) {
+        trimmed = price.substr(0, price.length - 3);
+    }
+
+    const parsed = parseFloat(trimmed);
     const valid = (
         !isNaN(parsed) &&
-        parsed.toString() == price.trim() &&
+        parsed.toString() == trimmed &&
         parsed > 0
     );
 
