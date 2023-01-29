@@ -195,7 +195,7 @@ async fn sample_listing(state: &ServerState, req: &mut Request<Body>) -> anyhow:
     if let Some(level) = Level::find_by_id(&req_data.level) {
         match state.db.sample_listing(req_data.seen_ids, level).await? {
             Some((item, id)) => Ok(serde_json::to_value(ListingResponse {
-                id: id,
+                id,
                 title: Some(item.title),
                 price: Some(item.price),
                 image_url: Some(format!(
