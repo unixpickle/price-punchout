@@ -30,6 +30,7 @@ mod levels;
 mod log;
 mod scraper;
 mod sources;
+mod target;
 
 #[derive(Clone, Parser)]
 pub struct Args {
