@@ -9,6 +9,9 @@ use tokio::{
 
 use crate::{db::Listing, scraper::Client};
 
+pub const CATEGORY_CLOTHES_SHOES_ACCESSORIES: &str = "rdihz";
+pub const CATEGORY_SPORTS_AND_OUTDOORS: &str = "5xt85";
+
 pub fn stream_category(client: Client, category_id: String) -> Receiver<anyhow::Result<Listing>> {
     let (tx, rx) = channel(1);
     spawn(async move {
@@ -20,7 +23,7 @@ pub fn stream_category(client: Client, category_id: String) -> Receiver<anyhow::
                 let mut offset = 0;
                 loop {
                     let full_url = format!(
-                        "{endpoint}?key={api_key}&category={category}&channel=WEB&count=24&default_purchasability_filter=true&include_sponsored=true&keyword=corgi&offset={offset}&page=%2Fc%2F{category}&platform=desktop&pricing_store_id=2766&scheduled_delivery_store_id=2766&store_ids=2766visitor_id={visitor_id}&zip=19096",
+                        "{endpoint}?key={api_key}&category={category}&channel=WEB&count=24&default_purchasability_filter=true&include_sponsored=true&offset={offset}&page=%2Fc%2F{category}&platform=desktop&pricing_store_id=2766&scheduled_delivery_store_id=2766&store_ids=2766&visitor_id={visitor_id}&zip=19096",
                         endpoint="https://redsky.target.com/redsky_aggregations/v1/web/plp_search_v2",
                         api_key=search_keys.api_key,
                         category=category_id,

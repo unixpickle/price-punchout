@@ -1,6 +1,8 @@
-use crate::{amazon, log_async};
+use crate::db::Listing;
+use crate::{amazon, log_async, target};
 use crate::{db::Database, scraper::Client};
 use std::{future::Future, pin::Pin, time::Duration};
+use tokio::sync::mpsc::Receiver;
 use tokio::time::sleep;
 
 // The frequency with which to check if a source needs to be updated.
@@ -15,6 +17,10 @@ const MAX_LISTINGS_PER_LEVEL: i64 = 4096;
 // fetching too many pages of results.
 const AMAZON_RESULT_LIMIT: i64 = 50;
 
+// This limit is applied to Target searches to prevent the scraper from
+// fetching too many pages of results.
+const TARGET_RESULT_LIMIT: i64 = 50;
+
 // A source of retail listing data.
 //
 // Each source implementation should have its own string identifier, which may
@@ -28,14 +34,20 @@ pub trait Source: Send + Sync {
     ) -> Pin<Box<dyn 'a + Send + Sync + Future<Output = anyhow::Result<()>>>>;
 }
 
-pub struct AmazonSource {
+pub struct StreamingSearchSource<
+    F: 'static + Send + Sync + Fn(Client, String) -> Receiver<anyhow::Result<Listing>>,
+> {
+    prefix: String,
     category: String,
     max_items: i64,
+    f: F,
 }
 
-impl Source for AmazonSource {
+impl<F: 'static + Send + Sync + Fn(Client, String) -> Receiver<anyhow::Result<Listing>>> Source
+    for StreamingSearchSource<F>
+{
     fn identifier(&self) -> String {
-        self.category.clone()
+        format!("{}/{}", self.prefix, self.category.clone())
     }
 
     fn update_listings<'a>(
@@ -44,7 +56,7 @@ impl Source for AmazonSource {
         db: &'a Database,
     ) -> Pin<Box<dyn 'a + Send + Sync + Future<Output = anyhow::Result<()>>>> {
         Box::pin(async move {
-            let mut listings = amazon::stream_category(client.clone(), self.category.clone());
+            let mut listings = (self.f)(client.clone(), self.category.clone());
             let mut count = 0;
             while let Some(result) = listings.recv().await {
                 let listing = result?;
@@ -59,22 +71,31 @@ impl Source for AmazonSource {
     }
 }
 
+fn amazon_source(category: &str) -> Box<dyn Source> {
+    Box::new(StreamingSearchSource {
+        prefix: "azn".to_owned(),
+        category: category.to_owned(),
+        max_items: AMAZON_RESULT_LIMIT,
+        f: amazon::stream_category,
+    })
+}
+
+fn target_source(category: &str) -> Box<dyn Source> {
+    Box::new(StreamingSearchSource {
+        prefix: "tgt".to_owned(),
+        category: category.to_owned(),
+        max_items: TARGET_RESULT_LIMIT,
+        f: target::stream_category,
+    })
+}
+
 pub fn default_sources() -> Vec<Box<dyn Source>> {
     vec![
-        Box::new(AmazonSource {
-            category: "interesting-finds".to_owned(),
-            max_items: AMAZON_RESULT_LIMIT,
-        }),
-        Box::new(AmazonSource {
-            // Tools and Home Improvement
-            category: "hgg-hol-hi".to_owned(),
-            max_items: AMAZON_RESULT_LIMIT,
-        }),
-        Box::new(AmazonSource {
-            // Electronics
-            category: "EGGHOL22-Hub".to_owned(),
-            max_items: AMAZON_RESULT_LIMIT,
-        }),
+        amazon_source("interesting-finds"),
+        amazon_source("hgg-hol-hi"),
+        amazon_source("EGGHOL22-Hub"),
+        target_source(target::CATEGORY_CLOTHES_SHOES_ACCESSORIES),
+        target_source(target::CATEGORY_SPORTS_AND_OUTDOORS),
     ]
 }
 
