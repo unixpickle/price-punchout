@@ -31,6 +31,11 @@ impl Client {
         self.run(move |client| client.get(u.clone()), resp_fn).await
     }
 
+    pub async fn get_bytes<U: IntoUrl>(&self, url: U) -> anyhow::Result<Vec<u8>> {
+        self.run_get(url, |resp| async { Ok(resp.bytes().await?.into()) })
+            .await
+    }
+
     pub async fn run<
         T,
         F: Future<Output = anyhow::Result<T>>,

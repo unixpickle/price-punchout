@@ -96,9 +96,7 @@ async fn result_page(
             continue;
         }
         if let Some(image_url) = item.display_large_image_url {
-            let image_data = client
-                .run_get(image_url, |resp| async { Ok(resp.bytes().await?) })
-                .await?;
+            let image_data = client.get_bytes(image_url).await?;
             if let Ok(parsed_price) = (&item.price.unwrap().replace(&[',', '$'], "")).parse::<f64>()
             {
                 listings.push(Listing {
