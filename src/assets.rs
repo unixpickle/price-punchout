@@ -34,9 +34,12 @@ const ASSETS: &'static [(&'static str, &'static [u8])] = &[
     asset_pair!(path_join!("svg", "amazon_box.svg")),
     asset_pair!(path_join!("svg", "back.svg")),
     asset_pair!(path_join!("svg", "calculator.svg")),
+    asset_pair!(path_join!("svg", "camping.svg")),
     asset_pair!(path_join!("svg", "gloves.svg")),
     asset_pair!(path_join!("svg", "list_bg.svg")),
     asset_pair!(path_join!("svg", "loader.svg")),
+    asset_pair!(path_join!("svg", "t_shirt.svg")),
+    asset_pair!(path_join!("svg", "target.svg")),
     asset_pair!(path_join!("svg", "treasure_chest.svg")),
 ];
 

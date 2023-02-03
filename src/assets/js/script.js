@@ -239,6 +239,8 @@ function WebsitePicker(props) {
 function websiteIcon(website) {
     if (website === 'Amazon') {
         return '/svg/amazon_box.svg';
+    } else if (website === 'Target') {
+        return '/svg/target.svg';
     } else {
         return '/svg/unknown.svg';
     }
@@ -268,8 +270,12 @@ function CategoryPicker(props) {
 function levelIcon(level) {
     if (level.category === 'Interesting Finds') {
         return '/svg/treasure_chest.svg';
-    } else if (level.category == 'Tools and Home Improvement') {
+    } else if (level.category === 'Tools and Home Improvement') {
         return '/svg/calculator.svg';
+    } else if (level.category === 'Clothes, Shoes & Accessories') {
+        return '/svg/t_shirt.svg';
+    } else if (level.category === 'Sports & Outdoors') {
+        return '/svg/camping.svg';
     } else {
         return '/svg/unknown.svg';
     }
