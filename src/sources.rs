@@ -90,13 +90,15 @@ fn target_source(category: &str) -> Box<dyn Source> {
 }
 
 pub fn default_sources() -> Vec<Box<dyn Source>> {
-    vec![
+    let mut result = vec![
         amazon_source("interesting-finds"),
         amazon_source("hgg-hol-hi"),
         amazon_source("EGGHOL22-Hub"),
-        target_source(target::CATEGORY_CLOTHES_SHOES_ACCESSORIES),
-        target_source(target::CATEGORY_SPORTS_AND_OUTDOORS),
-    ]
+    ];
+    for (_, category) in target::CATEGORIES {
+        result.push(target_source(category));
+    }
+    result
 }
 
 pub async fn update_sources_loop(

@@ -5,7 +5,7 @@ pub struct Level {
     query: &'static str,
 }
 
-pub const LEVELS: [Level; 4] = [
+pub const LEVELS: [Level; 5] = [
     Level{
         id: "amazon-if",
         website_name: "Amazon",
@@ -21,6 +21,12 @@ pub const LEVELS: [Level; 4] = [
         query: "website=\"amazon.com\" AND (
             SELECT COUNT(*) FROM categories WHERE categories.listing_id = listings.id AND categories.category = \"hgg-hol-hi\"
         ) > 0",
+    },
+    Level{
+        id: "target-all",
+        website_name: "Target",
+        category_name: "All Target",
+        query: "website=\"target.com\"",
     },
     Level{
         id: "target-clothes",

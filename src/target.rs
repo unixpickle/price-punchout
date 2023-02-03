@@ -9,8 +9,30 @@ use tokio::{
 
 use crate::{db::Listing, scraper::Client};
 
-pub const CATEGORY_CLOTHES_SHOES_ACCESSORIES: &str = "rdihz";
-pub const CATEGORY_SPORTS_AND_OUTDOORS: &str = "5xt85";
+pub const CATEGORIES: [(&str, &str); 21] = [
+    ("Gift Ideas", "96d2i"),
+    ("Grocery", "5xt1a"),
+    ("Household Essentials", "5xsz1"),
+    ("Baby", "5xtly"),
+    ("Beauty", "55r1x"),
+    ("Furniture", "5xtnr"),
+    ("Kitchen & Dining", "hz89j"),
+    ("Pets", "5xt44"),
+    ("School & Office Supplies", "5xsxr"),
+    ("Personal Care", "5xtzq"),
+    ("Health", "5xu1n"),
+    ("Sports & Outdoors", "5xt85"),
+    ("Toys", "5xtb0"),
+    ("Video Games", "5xtg5"),
+    ("Clothing, Shoes & Accessories", "rdihz"),
+    ("Electronics", "5xtg6"),
+    ("Home", "5xtvd"),
+    ("Luggage", "5xtz1"),
+    ("Movies, Music & Books", "5xsxe"),
+    ("Outdoor Living & Garden", "5xtq9"),
+    ("Party Supplies", "5xt3c"),
+    // ("Shop All Categories", "5xsxf"),
+];
 
 pub fn stream_category(client: Client, category_id: String) -> Receiver<anyhow::Result<Listing>> {
     let (tx, rx) = channel(1);
