@@ -109,7 +109,9 @@ async fn product_listing(
             website: "target.com".to_owned(),
             website_id: product.tcin,
             price: (parsed_price * 100.0).round() as i64,
-            title: product.item.product_description.title,
+            title: html_escape::decode_html_entities(&product.item.product_description.title)
+                .as_ref()
+                .to_owned(),
             image_data: image_data,
             categories: vec![category],
             star_rating: None,
