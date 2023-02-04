@@ -99,7 +99,7 @@ class App extends React.Component {
                         numPlayers: 2,
                     });
                 }}
-                onBack={() => setPage('levelWebsite')} />
+                onBack={() => this.setState({ page: 'levelWebsite' })} />
         ];
     }
 
@@ -114,7 +114,7 @@ class App extends React.Component {
                         roundResults: [],
                     })
                 }}
-                onBack={() => setPage('levelCategory')} />
+                onBack={() => this.setState({ page: 'levelCategory' })} />
         ];
     }
 
