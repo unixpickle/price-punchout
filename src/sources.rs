@@ -126,13 +126,13 @@ pub async fn update_sources_loop(
             }
         }
         if updated_any {
-            let (purged_listings, purged_blobs) =
-                db.delete_old_listings(MAX_LISTINGS_PER_LEVEL).await?;
+            let delete_counts = db.delete_old_listings(MAX_LISTINGS_PER_LEVEL).await?;
             log_async!(
                 &db,
-                "ran delete cycle: {} listings and {} blobs deleted.",
-                purged_listings,
-                purged_blobs
+                "ran delete cycle: {} listings, {} blobs, and {} categories deleted.",
+                delete_counts.listings,
+                delete_counts.blobs,
+                delete_counts.categories
             );
         }
         sleep(LOOP_CHECK_INTERVAL).await;

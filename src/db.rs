@@ -173,7 +173,7 @@ impl Database {
     pub async fn delete_old_listings(
         &self,
         category_capacity: i64,
-    ) -> rusqlite::Result<(usize, usize)> {
+    ) -> rusqlite::Result<DeleteCounts> {
         self.with_db(move |db| {
             let tx = db.transaction()?;
 
@@ -218,11 +218,26 @@ impl Database {
                 "
                     DELETE FROM blobs WHERE (
                         SELECT COUNT(*) FROM listings WHERE listings.image_blob = blobs.id
-                    ) == 0",
+                    ) == 0
+                ",
                 (),
             )?;
+
+            let category_count = tx.execute(
+                "
+                    DELETE FROM categories WHERE NOT EXISTS (
+                        SELECT NULL FROM listings WHERE listings.id = categories.listing_id
+                    )
+                ",
+                (),
+            )?;
+
             tx.commit()?;
-            Ok((listing_count, blob_count))
+            Ok(DeleteCounts {
+                listings: listing_count,
+                blobs: blob_count,
+                categories: category_count,
+            })
         })
         .await
     }
@@ -310,6 +325,12 @@ impl Database {
         })
         .await
     }
+}
+
+pub struct DeleteCounts {
+    pub listings: usize,
+    pub blobs: usize,
+    pub categories: usize,
 }
 
 async fn spawn_blocking_rusqlite<
