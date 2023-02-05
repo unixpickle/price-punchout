@@ -333,7 +333,7 @@ async fn spawn_blocking_rusqlite<
 fn create_tables(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute(
         "CREATE TABLE if not exists listings (
-            id           INTEGER PRIMARY KEY,
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
             created      INTEGER NOT NULL,
             last_seen    INTEGER NOT NULL,
             website      CHAR(32) NOT NULL,
@@ -351,7 +351,7 @@ fn create_tables(conn: &Connection) -> rusqlite::Result<()> {
     )?;
     conn.execute(
         "CREATE TABLE if not exists blobs (
-            id           INTEGER PRIMARY KEY,
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
             hash         CHAR(32),
             data         BLOB,
             UNIQUE (hash)
