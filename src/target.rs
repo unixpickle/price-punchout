@@ -1,7 +1,9 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
 use regex::Regex;
 use serde::Deserialize;
+use tokio::time::sleep;
 use tokio::{
     spawn,
     sync::mpsc::{channel, Receiver},
@@ -45,7 +47,7 @@ pub fn stream_category(client: Client, category_id: String) -> Receiver<anyhow::
                 let mut offset = 0;
                 loop {
                     let full_url = format!(
-                        "{endpoint}?key={api_key}&category={category}&channel=WEB&count=24&default_purchasability_filter=true&include_sponsored=true&offset={offset}&page=%2Fc%2F{category}&platform=desktop&pricing_store_id=2766&scheduled_delivery_store_id=2766&store_ids=2766&visitor_id={visitor_id}&zip=19096",
+                        "{endpoint}?key={api_key}&category={category}&channel=WEB&count=24&default_purchasability_filter=true&include_sponsored=true&offset={offset}&page=%2Fc%2F{category}&platform=desktop&pricing_store_id=2766&scheduled_delivery_store_id=2766&store_ids=2766&useragent=Mozilla%2F5.0+%28X11%3B+Linux+x86_64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F108.0.0.0+Safari%2F537.36&visitor_id={visitor_id}&zip=19096",
                         endpoint="https://redsky.target.com/redsky_aggregations/v1/web/plp_search_v2",
                         api_key=search_keys.api_key,
                         category=category_id,
@@ -58,6 +60,7 @@ pub fn stream_category(client: Client, category_id: String) -> Receiver<anyhow::
                             Ok(serde_json::from_slice::<'_, SearchResult>(&data)?)
                         })
                         .await;
+                    sleep(Duration::from_secs(10)).await;
                     match page_results {
                         Ok(results) => {
                             if results.data.search.products.len() == 0 {
