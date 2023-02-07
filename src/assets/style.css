@@ -234,6 +234,20 @@ input:focus {
     pointer-events: none;
 }
 
+.skip-button-container {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.skip-button {
+    font-size: 18px;
+    border: none;
+    background: transparent;
+    color: #db6969;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
 .product-listing {
     display: table;
     position: relative;

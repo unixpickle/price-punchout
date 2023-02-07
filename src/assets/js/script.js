@@ -159,6 +159,10 @@ class App extends React.Component {
                 listing={this.state.currentListing}
                 value={this.state.currentGuessValue}
                 onChange={(e) => this.setState({ currentGuessValue: e.target.value })}
+                onSkip={() => {
+                    client.idTracker.add(this.state.currentListing.id);
+                    this.setState({ page: 'loadingListing' });
+                }}
                 onChoice={(guess) => {
                     const newGuesses = this.state.currentGuesses.concat([guess]);
                     if (player === this.state.numPlayers) {
@@ -363,6 +367,11 @@ function GuessPicker(props) {
                     props.onChoice(parsed);
                 }
             }}>Submit</button>
+        <div class="skip-button-container">
+            <button
+                class="skip-button"
+                onClick={props.onSkip}>Skip</button>
+        </div>
     </div>;
 }
 
