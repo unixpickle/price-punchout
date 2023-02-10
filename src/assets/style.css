@@ -328,7 +328,8 @@ input:focus {
 }
 
 .winner-status-loser {
-    background-color: #e56b6b;
+    /* background-color: #e56b6b; */
+    background-color: transparent;
 }
 
 .winner-status-winner {
