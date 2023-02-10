@@ -380,7 +380,14 @@ function Guesses(props) {
 
     const rows = results.guesses.map((x, i) => {
         return <tr>
-            <td>Player {i + 1}</td>
+            <td>
+                <WinnerStatus
+                    player={i}
+                    result={props.lastResults} />
+            </td>
+            <td>
+                Player {i + 1}
+            </td>
             <td>${x}</td>
         </tr>;
     });
@@ -450,6 +457,13 @@ function Scoreboard(props) {
         </table>
         {props.done ? doneButton : nextButton}
     </div>;
+}
+
+function WinnerStatus(props) {
+    const player = props.player;
+    const result = props.result;
+    const won = result.winners().includes(player);
+    return <div class={"winner-status winner-status-" + (won ? "winner" : "loser")}></div>;
 }
 
 class RoundResult {

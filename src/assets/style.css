@@ -243,7 +243,7 @@ input:focus {
     font-size: 18px;
     border: none;
     background: transparent;
-    color: #db6969;
+    color: #727272;
     cursor: pointer;
     text-decoration: underline;
 }
@@ -315,4 +315,22 @@ input:focus {
 .scoreboard-table td:last-child,
 .guesses-table td:last-child {
     text-align: left;
+}
+
+.winner-status {
+    width: 14px;
+    height: 14px;
+    position: relative;
+    vertical-align: middle;
+    border-radius: 7px;
+    display: inline-block;
+    margin-bottom: 3px;
+}
+
+.winner-status-loser {
+    background-color: #e56b6b;
+}
+
+.winner-status-winner {
+    background-color: #2bcb2b;
 }
