@@ -40,6 +40,9 @@ pub struct Args {
     #[clap(short, long, value_parser, default_value_t = 60*60*24)]
     update_interval: u64,
 
+    #[clap(short, long, value_parser, default_value_t = false)]
+    no_updates: bool,
+
     #[clap(short, long, value_parser, default_value_t = 10)]
     client_retries: i32,
 
@@ -69,17 +72,19 @@ async fn run(args: Args) -> anyhow::Result<()> {
     let db = Database::open(&args.db_path).await?;
 
     let http_client = Client::new(args.client_retries);
-    let sources_db = db.clone();
-    spawn(async move {
-        update_sources_loop(
-            http_client,
-            sources_db,
-            Duration::from_secs(args.update_interval),
-            default_sources(),
-        )
-        .await
-        .expect("update sources loop should never fail; this is a fatal error");
-    });
+    if !args.no_updates {
+        let sources_db = db.clone();
+        spawn(async move {
+            update_sources_loop(
+                http_client,
+                sources_db,
+                Duration::from_secs(args.update_interval),
+                default_sources(),
+            )
+            .await
+            .expect("update sources loop should never fail; this is a fatal error");
+        });
+    }
 
     let addr = SocketAddr::from(([0, 0, 0, 0], args.port));
     let state = ServerState {
