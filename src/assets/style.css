@@ -48,6 +48,17 @@ input:focus {
     margin-bottom: 16px;
 }
 
+#new-game {
+    position: absolute;
+    right: 4px;
+    height: 40px;
+    border: none;
+    background-color: transparent;
+    color: #65bcd4;
+    font-size: 24px;
+    cursor: pointer;
+}
+
 .loader {
     display: block;
     margin: auto;

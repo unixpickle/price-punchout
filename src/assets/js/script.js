@@ -56,6 +56,10 @@ class App extends React.Component {
         });
     }
 
+    newGame() {
+        this.setState({ page: 'loadingLevels' });
+    }
+
     renderLoadingLevels() {
         client.levels().then((levels) => {
             if (this.state.page === 'loadingLevels') {
@@ -71,7 +75,7 @@ class App extends React.Component {
     }
 
     renderError() {
-        return [<Header />, <Error message={this.state.error} />];
+        return [<Header onNewGame={() => this.newGame()} />, <Error message={this.state.error} />];
     }
 
     renderLevelWebsite() {
@@ -88,7 +92,7 @@ class App extends React.Component {
 
     renderLevelCategory() {
         return [
-            <Header />,
+            <Header onNewGame={() => this.newGame()} />,
             <CategoryPicker
                 levels={this.state.levels}
                 website={this.state.levelWebsite}
@@ -105,7 +109,7 @@ class App extends React.Component {
 
     renderLevelPlayers() {
         return [
-            <Header />,
+            <Header onNewGame={() => this.newGame()} />,
             <PlayersPicker
                 onChoice={(count) => {
                     this.setState({
@@ -120,26 +124,28 @@ class App extends React.Component {
 
     renderLoadingListing() {
         client.sampleListing(this.state.selectedLevel.id).then((listing) => {
-            if (listing.title === null) {
-                this.setState({ page: 'noListings' });
-                return;
+            if (this.state.page === 'loadingListing') {
+                if (listing.title === null) {
+                    this.setState({ page: 'noListings' });
+                    return;
+                }
+                this.setState({
+                    page: 'guessing',
+                    currentListing: listing,
+                    currentGuesses: [],
+                    currentGuessValue: '',
+                });
             }
-            this.setState({
-                page: 'guessing',
-                currentListing: listing,
-                currentGuesses: [],
-                currentGuessValue: '',
-            })
         }).catch((e) => {
             this.showError(e.toString());
         });
-        return [<Header />, <Loader />];
+        return [<Header onNewGame={() => this.newGame()} />, <Loader />];
     }
 
     renderNoListings() {
         if (this.state.roundResults.length > 0) {
             return [
-                <Header />,
+                <Header onNewGame={() => this.newGame()} />,
                 <Scoreboard
                     roundResults={this.state.roundResults}
                     done={true}
@@ -153,7 +159,7 @@ class App extends React.Component {
     renderGuessing() {
         const player = 1 + this.state.currentGuesses.length;
         return [
-            <Header />,
+            <Header onNewGame={() => this.newGame()} />,
             <GuessPicker
                 player={player}
                 listing={this.state.currentListing}
@@ -186,7 +192,7 @@ class App extends React.Component {
 
     renderGuesses() {
         return [
-            <Header />,
+            <Header onNewGame={() => this.newGame()} />,
             <Guesses
                 listing={this.state.currentListing}
                 lastResults={this.state.roundResults[this.state.roundResults.length - 1]}
@@ -196,7 +202,7 @@ class App extends React.Component {
 
     renderScoreboard() {
         return [
-            <Header />,
+            <Header onNewGame={() => this.newGame()} />,
             <Scoreboard
                 roundResults={this.state.roundResults}
                 done={false}
@@ -205,8 +211,10 @@ class App extends React.Component {
     }
 }
 
-function Header() {
-    return <div id="logo-header"></div>;
+function Header(props) {
+    return <div id="logo-header">
+        {props.onNewGame ? <button id="new-game" onClick={props.onNewGame}>New Game</button> : null}
+    </div>;
 }
 
 function Loader() {
@@ -444,7 +452,7 @@ function Scoreboard(props) {
     const doneButton = (
         <button
             class="ok-button"
-            onClick={props.onNewGame}>New game</button>
+            onClick={props.onNewGame}>New Game</button>
     );
 
     return <div class="content-pane">
