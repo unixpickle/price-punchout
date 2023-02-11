@@ -1,9 +1,9 @@
-use std::fmt::Write;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::{fmt::Write, time::Duration};
 
-use rusqlite::{Connection, Transaction};
+use rusqlite::{Connection, ErrorCode, Transaction};
 use sha2::Digest;
 use tokio::{sync::Mutex, task::spawn_blocking};
 
@@ -19,7 +19,7 @@ pub struct Database {
 impl Database {
     pub async fn open<P: AsRef<Path>>(path: P) -> rusqlite::Result<Database> {
         let path = path.as_ref().to_owned();
-        spawn_blocking_rusqlite(move || Database::new_with_conn(Connection::open(path)?)).await
+        spawn_blocking_rusqlite(move || Database::new_with_conn(Connection::open(&path)?)).await
     }
 
     #[allow(dead_code)]
@@ -61,7 +61,7 @@ impl Database {
                         rusqlite::params![blob_id, listing.price, listing.title, id],
                     )?;
                     garbage_collect_blob(&mut tx, old_image_blob)?;
-                    insert_categories(&mut tx, id, listing.categories)?;
+                    insert_categories(&mut tx, id, &listing.categories)?;
                 }
                 Err(rusqlite::Error::QueryReturnedNoRows) => {
                     tx.execute(
@@ -102,7 +102,7 @@ impl Database {
                         ],
                     )?;
                     let insert_id = tx.last_insert_rowid();
-                    insert_categories(&mut tx, insert_id, listing.categories)?;
+                    insert_categories(&mut tx, insert_id, &listing.categories)?;
                 }
                 x @ Err(_) => {
                     x?;
@@ -123,7 +123,7 @@ impl Database {
             let tx = db.transaction()?;
             tx.execute(
                 "INSERT INTO log (timestamp, source, message) VALUES (unixepoch(), ?1, ?2)",
-                (source, message),
+                (&source, &message),
             )?;
             tx.execute(
                 "DELETE FROM log WHERE id NOT IN (
@@ -144,7 +144,7 @@ impl Database {
         self.with_db(move |db| {
             match db.query_row(
                 "SELECT (last_updated+?1 < unixepoch()) FROM source_status WHERE source_id=?2",
-                (max_seconds, source),
+                (max_seconds, &source),
                 |row| row.get::<_, bool>(0),
             ) {
                 Ok(value) => Ok(value),
@@ -159,7 +159,7 @@ impl Database {
         self.with_db(move |db| {
             db.execute(
                 "INSERT OR REPLACE INTO source_status (source_id, last_updated) VALUES (?1, unixepoch())",
-                (source,),
+                (&source,),
             ).map(|_| ())
         })
         .await
@@ -242,7 +242,7 @@ impl Database {
         .await
     }
 
-    pub async fn level_count<I: 'static + Send + Sync + IntoIterator<Item = i64>>(
+    pub async fn level_count<I: 'static + Send + Sync + Clone + IntoIterator<Item = i64>>(
         &self,
         blacklist: I,
         level: &'static Level,
@@ -252,12 +252,14 @@ impl Database {
                 "SELECT COUNT(*) FROM listings WHERE {} AND id NOT IN rarray(?1)",
                 level.listing_query()
             );
-            db.query_row(&query, (&values_to_rarray(blacklist),), |row| row.get(0))
+            db.query_row(&query, (&values_to_rarray(blacklist.clone()),), |row| {
+                row.get(0)
+            })
         })
         .await
     }
 
-    pub async fn sample_listing<I: 'static + Send + Sync + IntoIterator<Item = i64>>(
+    pub async fn sample_listing<I: 'static + Send + Sync + Clone + IntoIterator<Item = i64>>(
         &self,
         blacklist: I,
         level: &'static Level,
@@ -273,7 +275,7 @@ impl Database {
                 ",
                 level.listing_query(),
             );
-            let result = tx.query_row(&query, (&values_to_rarray(blacklist),), |row| {
+            let result = tx.query_row(&query, (&values_to_rarray(blacklist.clone()),), |row| {
                 Ok((
                     Listing {
                         website: row.get("website")?,
@@ -313,15 +315,30 @@ impl Database {
 
     async fn with_db<
         T: 'static + Send,
-        F: 'static + Send + FnOnce(&mut Connection) -> rusqlite::Result<T>,
+        F: 'static + Send + FnMut(&mut Connection) -> rusqlite::Result<T>,
     >(
         &self,
-        f: F,
+        mut f: F,
     ) -> rusqlite::Result<T> {
         let db_ref = self.db.clone();
         spawn_blocking_rusqlite(move || {
             let mut db = db_ref.blocking_lock();
-            f(&mut db)
+            loop {
+                let res = f(&mut db);
+                match res {
+                    Ok(x) => return Ok(x),
+                    Err(e) => {
+                        let code = e.sqlite_error_code();
+                        if code == Some(ErrorCode::DatabaseLocked)
+                            || code == Some(ErrorCode::DatabaseBusy)
+                        {
+                            std::thread::sleep(Duration::from_millis(10));
+                        } else {
+                            return Err(e);
+                        }
+                    }
+                }
+            }
         })
         .await
     }
@@ -335,7 +352,7 @@ pub struct DeleteCounts {
 
 async fn spawn_blocking_rusqlite<
     T: 'static + Send,
-    F: 'static + Send + FnOnce() -> rusqlite::Result<T>,
+    F: 'static + Send + FnMut() -> rusqlite::Result<T>,
 >(
     f: F,
 ) -> rusqlite::Result<T> {
@@ -451,11 +468,7 @@ fn garbage_collect_blob(tx: &mut Transaction, id: i64) -> rusqlite::Result<()> {
     Ok(())
 }
 
-fn insert_categories(
-    tx: &mut Transaction,
-    id: i64,
-    categories: Vec<String>,
-) -> rusqlite::Result<()> {
+fn insert_categories(tx: &mut Transaction, id: i64, categories: &[String]) -> rusqlite::Result<()> {
     for cat in categories {
         tx.execute(
             "INSERT OR IGNORE INTO categories (listing_id, category) VALUES (?1, ?2)",
