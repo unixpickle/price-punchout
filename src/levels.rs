@@ -23,7 +23,7 @@ pub const LEVELS: [Level; 6] = [
     Level{
         id: "amazon-thi",
         website_name: "Amazon",
-        category_name: "Tools and Home Improvement",
+        category_name: "Home Improvement",
         query: "website=\"amazon.com\" AND (
             SELECT COUNT(*) FROM categories WHERE categories.listing_id = listings.id AND categories.category = \"adult-neutral:home-improvement\"
         ) > 0",
