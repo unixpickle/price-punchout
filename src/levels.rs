@@ -5,7 +5,13 @@ pub struct Level {
     query: &'static str,
 }
 
-pub const LEVELS: [Level; 5] = [
+pub const LEVELS: [Level; 6] = [
+    Level{
+        id: "amazon-all",
+        website_name: "Amazon",
+        category_name: "All Amazon",
+        query: "website=\"amazon.com\"",
+    },
     Level{
         id: "amazon-if",
         website_name: "Amazon",
@@ -19,7 +25,7 @@ pub const LEVELS: [Level; 5] = [
         website_name: "Amazon",
         category_name: "Tools and Home Improvement",
         query: "website=\"amazon.com\" AND (
-            SELECT COUNT(*) FROM categories WHERE categories.listing_id = listings.id AND categories.category = \"hgg-hol-hi\"
+            SELECT COUNT(*) FROM categories WHERE categories.listing_id = listings.id AND categories.category = \"adult-neutral:home-improvement\"
         ) > 0",
     },
     Level{

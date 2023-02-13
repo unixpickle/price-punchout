@@ -90,11 +90,10 @@ fn target_source(category: &str) -> Box<dyn Source> {
 }
 
 pub fn default_sources() -> Vec<Box<dyn Source>> {
-    let mut result = vec![
-        amazon_source("interesting-finds"),
-        amazon_source("hgg-hol-hi"),
-        amazon_source("EGGHOL22-Hub"),
-    ];
+    let mut result = Vec::new();
+    for (_, category) in amazon::CATEGORIES {
+        result.push(amazon_source(category));
+    }
     for (_, category) in target::CATEGORIES {
         result.push(target_source(category));
     }

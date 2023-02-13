@@ -280,7 +280,9 @@ function CategoryPicker(props) {
 }
 
 function levelIcon(level) {
-    if (level.id === 'amazon-if') {
+    if (level.id === 'amazon-all') {
+        return '/svg/amazon_box.svg';
+    } else if (level.id === 'amazon-if') {
         return '/svg/treasure_chest.svg';
     } else if (level.id === 'amazon-thi') {
         return '/svg/calculator.svg';

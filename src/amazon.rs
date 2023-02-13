@@ -8,6 +8,22 @@ use tokio::{
     sync::mpsc::{channel, Receiver},
 };
 
+pub const CATEGORIES: [(&str, &str); 13] = [
+    ("Interesting Finds", "interesting-finds"),
+    ("Tech & Gadgets", "adult-neutral:tech-and-gadgets"),
+    ("Art & Design", "adult-neutral:art-and-design"),
+    ("Home & Garden", "adult-neutral:home-and-garden"),
+    ("Fitness & Sports", "adult-neutral:fitness-and-sports"),
+    ("Home Improvement", "adult-neutral:home-improvement"),
+    ("Outdoor Adventure", "adult-neutral:outdoor-adventure"),
+    ("Travel", "adult-neutral:travel"),
+    ("Workplace", "adult-neutral:business"),
+    ("Style & Fashion (Male)", "adult-male:style-and-fashion"),
+    ("Style & Fashion (Female)", "adult-female:style-and-fashion"),
+    ("Retro", "adult-neutral:retro"),
+    ("Geeky", "adult-neutral:geek-culture"),
+];
+
 #[derive(Deserialize)]
 struct AmazonPage {
     asins: Vec<AmazonResult>,
