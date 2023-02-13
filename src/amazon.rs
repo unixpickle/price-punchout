@@ -90,7 +90,7 @@ async fn result_page(
     let mut url = Url::parse("https://www.amazon.com/gcx/-/gfhz/api/scroll?canBeEGifted=false&canBeGiftWrapped=false&isLimitedTimeOffer=false&isPrime=false&priceFrom&priceTo").unwrap();
 
     // The ID may have no sub-id, or may be "id:subid".
-    let (category_id, sub_category_id) = if let Some(split_idx) = category_id.find(":") {
+    let (main_category_id, sub_category_id) = if let Some(split_idx) = category_id.find(":") {
         (
             &category_id[0..split_idx],
             Some(&category_id[(split_idx + 1)..]),
@@ -100,14 +100,14 @@ async fn result_page(
     };
 
     url.query_pairs_mut()
-        .append_pair("categoryId", category_id)
+        .append_pair("categoryId", main_category_id)
         .append_pair("count", "50")
         .append_pair("offset", &format!("{}", offset))
         .append_pair("searchBlob", &search_blob);
     if let Some(sub_category_id) = sub_category_id {
         url.query_pairs_mut().append_pair(
             "subcategoryIds",
-            &format!("{}:{}", category_id, sub_category_id),
+            &format!("{}:{}", main_category_id, sub_category_id),
         );
     }
     let results = client
