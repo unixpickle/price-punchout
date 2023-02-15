@@ -285,7 +285,7 @@ function levelIcon(level) {
     } else if (level.id === 'amazon-if') {
         return '/svg/treasure_chest.svg';
     } else if (level.id === 'amazon-thi') {
-        return '/svg/calculator.svg';
+        return '/svg/wrench.svg';
     } else if (level.id === 'target-clothes') {
         return '/svg/t_shirt.svg';
     } else if (level.id === 'target-sports-outdoors') {

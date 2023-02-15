@@ -41,6 +41,7 @@ const ASSETS: &'static [(&'static str, &'static [u8])] = &[
     asset_pair!(path_join!("svg", "t_shirt.svg")),
     asset_pair!(path_join!("svg", "target.svg")),
     asset_pair!(path_join!("svg", "treasure_chest.svg")),
+    asset_pair!(path_join!("svg", "wrench.svg")),
 ];
 
 pub async fn asset_response<'a>(asset_dir: &'a Option<String>, name: &'a str) -> Response<Body> {
