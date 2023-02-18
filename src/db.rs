@@ -118,20 +118,29 @@ impl Database {
         &self,
         source: String,
         message: String,
-    ) -> rusqlite::Result<()> {
+    ) -> rusqlite::Result<String> {
         self.with_db(move |db| {
             let tx = db.transaction()?;
             tx.execute(
                 "INSERT INTO log (timestamp, source, message) VALUES (unixepoch(), ?1, ?2)",
                 (&source, &message),
             )?;
+            let timestamp: String = tx
+                .prepare(
+                    "
+                        SELECT STRFTIME(\"%d/%m/%Y %H:%M:%S\", DATETIME(timestamp, 'unixepoch'))
+                        FROM log WHERE id = ?
+                    ",
+                )?
+                .query_row((tx.last_insert_rowid(),), |row| row.get(0))?;
             tx.execute(
                 "DELETE FROM log WHERE id NOT IN (
                     SELECT id FROM log ORDER BY timestamp DESC LIMIT ?1
                 )",
                 (LOG_LIMIT,),
             )?;
-            tx.commit()
+            tx.commit()?;
+            Ok(timestamp)
         })
         .await
     }
