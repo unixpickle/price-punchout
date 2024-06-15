@@ -29,7 +29,7 @@ struct AmazonPage {
     asins: Vec<AmazonResult>,
 
     #[serde(rename(deserialize = "searchBlob"))]
-    search_blob: String,
+    search_blob: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -121,7 +121,7 @@ async fn result_page(
         .await?;
 
     *offset += results.asins.len() as i64;
-    *search_blob = results.search_blob;
+    *search_blob = results.search_blob.unwrap_or("".to_owned());
 
     let mut listings = Vec::with_capacity(results.asins.len());
     for item in results.asins {
